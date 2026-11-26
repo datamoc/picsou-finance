@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -26,8 +26,9 @@ const NO_SESSION = {
   lastSyncStartedAt: null, lastSyncCompletedAt: null,
 }
 
+/** A connector failure as the backend answers it: a 422 carrying the code. */
 function apiError(code: string) {
-  return Object.assign(new Error(code), { response: { status: 400, data: { code } } })
+  return Object.assign(new Error(code), { response: { status: 422, data: { code } } })
 }
 
 function renderPanel() {
@@ -142,6 +143,8 @@ describe('NatixisPanel', () => {
     fireEvent.click(button)
 
     expect(await screen.findByText(`sync.natixis.errors.${message}`)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'sync.reportProblem.action' }))
+    expect(screen.getByTestId('connector-report-title')).toHaveTextContent(`natixis (${code})`)
   })
 
   it('drops the attempt on any other second-factor error', async () => {

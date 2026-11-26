@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -101,6 +101,7 @@ describe('LbpTab', () => {
     await signIn('1234')
 
     expect(screen.getByText('sync.lbp.errors.invalidIdentifier')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'sync.reportProblem.action' })).not.toBeInTheDocument()
     expect(apiPost).not.toHaveBeenCalledWith('/lbp/auth/initiate', expect.anything())
   })
 

@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { getSelectOptionValues } from '@/test/radix-select'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -33,8 +33,14 @@ const { finaryStatus, previewFinaryApi, importFinary, executeFinaryApiSync } = v
   executeFinaryApiSync: vi.fn(),
 }))
 
-const { desktopUnavailable } = vi.hoisted(() => ({
+const { desktopUnavailable, navigate } = vi.hoisted(() => ({
   desktopUnavailable: vi.fn<(key: string) => boolean>(() => false),
+  navigate: vi.fn(),
+}))
+
+vi.mock('react-router', async (orig) => ({
+  ...(await orig<typeof import('react-router')>()),
+  useNavigate: () => navigate,
 }))
 
 vi.mock('@/features/desktop/hooks', () => ({

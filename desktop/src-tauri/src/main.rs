@@ -1,6 +1,7 @@
 // No console window next to the app on Windows.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod enable_banking;
 mod external;
 mod i18n;
 mod passkey;
@@ -228,6 +229,8 @@ fn main() {
         ))
         .manage(stack.clone())
         .manage(update::TrayItem::default())
+        .manage(update::UpdateState::default())
+        .manage(enable_banking::ActiveAuthWindow::default())
         .on_window_event(|window, event| {
             // Closing the main window keeps Picsou running in the tray; bank login windows close normally.
             if window.label() != "main" {
@@ -242,7 +245,13 @@ fn main() {
             }
         })
         .manage(Failure::default())
-        .invoke_handler(tauri::generate_handler![restore_backup])
+        .invoke_handler(tauri::generate_handler![
+            restore_backup,
+            enable_banking::open_enable_banking_auth,
+            update::get_desktop_update_status,
+            update::check_desktop_update,
+            update::install_desktop_update
+        ])
         .on_page_load(|webview, payload| {
             if webview.label() == "main" && payload.event() == PageLoadEvent::Finished {
                 if payload.url().scheme() == "http" {
@@ -275,6 +284,7 @@ fn main() {
             if update::enabled(app.config()) {
                 app.handle()
                     .plugin(tauri_plugin_updater::Builder::new().build())?;
+                update::start_renderer(app.handle());
             }
             let stack = handle.state::<Shared>().inner().clone();
             // The window shows ui/index.html while the embedded SQLite backend starts, then the app.
@@ -309,7 +319,11 @@ fn main() {
 
     // Quit, logout and shutdown all end here or in a signal; PR_SET_PDEATHSIG covers the signal.
     app.run(move |app, event| match event {
-        RunEvent::Exit => supervisor::stop(&stack),
+        RunEvent::Exit => {
+            app.state::<enable_banking::ActiveAuthWindow>()
+                .close_active(app);
+            supervisor::stop(&stack);
+        }
         // macOS: a click on the Dock icon of a running Picsou whose window is closed.
         #[cfg(target_os = "macos")]
         RunEvent::Reopen {

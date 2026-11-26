@@ -391,6 +391,8 @@ struct HoldingData {
     series: Option<(String, bool)>,
     quantity: Decimal,
     provider_value_eur: Option<Decimal>,
+    /// The line's value held flat over the 24 hours: an ISIN line has no hourly series (#702).
+    flat_value_eur: Option<Decimal>,
 }
 
 /// buildIntradayHistory: one point an hour over the last 24 hours.
@@ -459,11 +461,23 @@ pub async fn get_intraday(
             continue;
         }
         let crypto = account.account_type == AccountType::Crypto;
+        let by_isin = !crypto && lines.iter().any(|h| h.isin.is_some());
+        let quotes = if by_isin {
+            valuation::quotes_for(prices, account, &lines, today).await
+        } else {
+            HashMap::new()
+        };
         let mut data = Vec::with_capacity(lines.len());
         let mut invested = Decimal::ZERO;
         let mut any_cost_unknown = false;
         for h in &lines {
-            let series = Some((h.ticker.to_uppercase(), crypto));
+            // An ISIN line is never priced through a ticker's hourly series (#702): it stays at
+            // the value the daily chart gives it now (its ISIN quote, else the bank's value).
+            let isin_line = !crypto && h.isin.is_some();
+            let series = (!isin_line).then(|| (h.ticker.to_uppercase(), crypto));
+            let flat_value_eur = isin_line
+                .then(|| valuation::value_holding(account, h, &quotes).current_value_eur)
+                .flatten();
             let provider_cost = valuation::provider_cost_basis_eur(h);
             if provider_cost.is_none() && h.average_buy_in.is_none() {
                 any_cost_unknown = true;
@@ -480,6 +494,7 @@ pub async fn get_intraday(
                 series,
                 quantity: h.quantity,
                 provider_value_eur: h.provider_value_eur,
+                flat_value_eur,
             });
         }
         let pocket = account.cash_balance.unwrap_or(Decimal::ZERO);
@@ -584,12 +599,26 @@ pub async fn get_intraday(
             } else {
                 let mut market = Decimal::ZERO;
                 for line in lines {
+                    if let Some(v) = line.flat_value_eur {
+                        market = add(market, v);
+                        continue;
+                    }
                     let price = line
                         .series
                         .as_ref()
                         .and_then(|s| series_prices.get(s))
                         .and_then(|m| m.range(..=ts).next_back().map(|(_, p)| *p));
-                    if let Some(p) = price {
+                    // A quote the provider contradicts is another listing's: valuation() drops it
+                    // for the daily chart, so the hourly one must too (#683).
+                    let overruled = |p: Decimal| {
+                        valuation::provider_overrules_quote(
+                            account,
+                            line.quantity,
+                            p,
+                            line.provider_value_eur,
+                        )
+                    };
+                    if let Some(p) = price.filter(|p| !overruled(*p)) {
                         market = add(market, line.quantity * p);
                     } else if let Some(v) = line.provider_value_eur {
                         market = add(market, v);
@@ -654,7 +683,7 @@ pub async fn get_pnl(
     let mut live_total = Decimal::ZERO;
     let mut live_invested = Decimal::ZERO;
     let mut live_value = Decimal::ZERO;
-    let mut range_holdings: Vec<(i64, AccountHolding)> = Vec::new();
+    let mut range_holdings: Vec<(&Account, AccountHolding)> = Vec::new();
     let mut unknown_basis = false;
     for account in &list {
         let lines = holdings::find_by_account(&mut conn, account.id).await?;
@@ -680,7 +709,7 @@ pub async fn get_pnl(
             }
         }
         if !per {
-            range_holdings.extend(lines.into_iter().map(|h| (account.id, h)));
+            range_holdings.extend(lines.into_iter().map(|h| (account, h)));
         }
     }
     let pnl = sub(live_value, live_invested);
@@ -718,28 +747,53 @@ pub async fn get_pnl(
     let mut live_matched = Decimal::ZERO;
     let mut matched = 0;
     let mut snaps: HashMap<String, Option<Decimal>> = HashMap::new();
+    let distinct_isins: BTreeSet<String> = range_holdings
+        .iter()
+        .filter(|(account, _)| account.account_type != AccountType::Crypto)
+        .filter_map(|(_, h)| h.isin.clone())
+        .collect();
+    let isin_lives = if distinct_isins.is_empty() {
+        HashMap::new()
+    } else {
+        prices.isin_quotes(&distinct_isins, today).await
+    };
     let mut lives: HashMap<String, Option<Decimal>> = HashMap::new();
-    for (account_id, h) in &range_holdings {
-        let ticker = &h.ticker;
-        if !snaps.contains_key(ticker) {
-            let snap = prices::latest_price_on_or_before(&mut conn, ticker, from_date).await?;
-            snaps.insert(ticker.clone(), snap.map(|s| s.price_eur));
+    for (account, h) in &range_holdings {
+        // Both sides of an ISIN line are ISIN prices (#702): the price recorded under the ISIN,
+        // and the ISIN quote. A line missing either stays out, never mixed with a ticker's.
+        let isin = h
+            .isin
+            .as_ref()
+            .filter(|_| account.account_type != AccountType::Crypto);
+        let key = isin.unwrap_or(&h.ticker);
+        if !snaps.contains_key(key) {
+            let snap = prices::latest_price_on_or_before(&mut conn, key, from_date).await?;
+            snaps.insert(key.clone(), snap.map(|s| s.price_eur));
         }
-        let Some(then) = snaps[ticker] else { continue };
-        if !lives.contains_key(ticker) {
-            let quote = prices.quote(ticker, false, today).await;
-            lives.insert(ticker.clone(), quote.map(|q| q.price));
-        }
-        let Some(now_price) = lives[ticker] else {
+        let Some(then) = snaps[key] else { continue };
+        let now_price = match isin {
+            Some(isin) => isin_lives.get(isin).map(|q| q.price),
+            None => {
+                if !lives.contains_key(&h.ticker) {
+                    let quote = prices.quote(&h.ticker, false, today).await;
+                    lives.insert(h.ticker.clone(), quote.map(|q| q.price));
+                }
+                lives[&h.ticker]
+            }
+        };
+        let Some(now_price) = now_price else {
             continue;
         };
-        value_at_from = add(
-            value_at_from,
-            weigh(h.quantity * then, &shares, *account_id),
-        );
+        // Another listing's price, as valuation() judges it (#683): its move is not the
+        // position's, so the line stays out of both sides like any unmatched holding.
+        if valuation::provider_overrules_quote(account, h.quantity, now_price, h.provider_value_eur)
+        {
+            continue;
+        }
+        value_at_from = add(value_at_from, weigh(h.quantity * then, &shares, account.id));
         live_matched = add(
             live_matched,
-            weigh(h.quantity * now_price, &shares, *account_id),
+            weigh(h.quantity * now_price, &shares, account.id),
         );
         matched += 1;
     }

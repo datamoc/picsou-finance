@@ -1,6 +1,6 @@
 # Feature: Desktop app
 
-> Last updated: 2026-11-24
+> Last updated: 2026-11-26
 
 ## Opening the unsigned desktop app (macOS Gatekeeper & Windows SmartScreen)
 
@@ -23,14 +23,14 @@ Picsou is a free, open-source, self-hosted project and does not yet pay for an A
 
 ### Windows (64-bit)
 
-1. Double-click the downloaded installer (`Picsou_<version>_x64-setup.exe`).
+1. Double-click the downloaded installer (`Picsou-Windows-x64.exe` from the README button, or `Picsou_<version>_x64-setup.exe` from the Releases page).
 2. When Microsoft Defender SmartScreen displays **"Windows protected your PC"** (*Windows a protégé votre ordinateur*), click **More info** (*Informations complémentaires*).
 3. Click **Run anyway** (*Exécuter quand même*).
 4. Picsou installs into your user folder (`%LOCALAPPDATA%\Picsou`) without asking for administrator rights.
 
 ### Linux
 
-- **AppImage**: make the file executable (`chmod +x Picsou_*.AppImage`) and run it.
+- **AppImage**: make the file executable (`chmod +x Picsou*.AppImage`) and run it.
 - **Debian / Ubuntu (`.deb`)**: install with `sudo apt install ./Picsou_*.deb`.
 
 ## Context
@@ -106,8 +106,11 @@ no external database process, and no bundled PostgreSQL server.
   works) and puts the backup in place. The copy is staged as `*.restoring` first, so a failed
   restore changes nothing. Data without an `app-version` marker counts as an update from
   `unknown`. The user then reinstalls the previous version.
-- The button calls the `restore_backup` command. IPC is open only to the bundled `ui/` page
-  (`capabilities/error-page.json` lists no remote URL), so backend pages cannot call it.
+- The button calls the `restore_backup` command. App-level permissions live in
+  `permissions/desktop-app.toml`: `capabilities/error-page.json` (bundled `ui/` origin only, no
+  remote URL) grants `allow-restore-backup`, while `capabilities/desktop-updater.json` (`local:
+  false`, remote `http://127.0.0.1:*` on the `main` window) grants only the updater commands and
+  event listen/unlisten, so backend pages can never call `restore_backup`.
 
 ### Windows (#591, unsigned)
 
@@ -209,6 +212,43 @@ no external database process, and no bundled PostgreSQL server.
   `APPLE_ID`, `APPLE_PASSWORD` and `APPLE_TEAM_ID` as secrets and pass them to the build step;
   Tauri then signs with the Developer ID and notarizes, and the Gatekeeper step goes away.
 
+### Enable Banking (#590, callback intercepted in-app; real Production check pending)
+
+The backend sends `ENABLEBANKING_REDIRECT_URI` to Enable Banking, which must match a URL
+registered on its Control Panel. Docker and web installs use their public HTTPS host. On desktop,
+the embedded backend listens on plain HTTP (`127.0.0.1`, port reused from `desktop-port` when free,
+otherwise a new ephemeral port), so navigating the main window to the bank and waiting for a
+network redirect back fails: Production requires HTTPS, a port change breaks the registered URL,
+and a host mismatch (`localhost` vs `127.0.0.1`) drops the `SameSite=Strict` `picsou_desktop_gate`
+and session cookies.
+
+What is implemented on desktop:
+- Launching an Enable Banking flow (`BankSyncTab`, `AddAccountWizards`, `SyncAllModal`) no longer
+  leaves the main window. Instead, the SPA invokes the `open_enable_banking_auth` Tauri command
+  (`desktop/src-tauri/src/enable_banking.rs`, gated by `allow-open-enable-banking-auth` in
+  `capabilities/enable-banking-auth.json` for `main` on `http://127.0.0.1:*` only).
+- The command opens `authLink` (validated as plain `https://` with no embedded credentials) in an
+  incognito `WebviewWindow` titled **Enable Banking**.
+- Its `on_navigation` hook inspects every navigation for a path ending with `/sync/callback`
+  (regardless of scheme, host, or port). When matched, it cancels the navigation before the
+  WebView makes any TCP/TLS connection, destroys the popup window, refocuses `main`, and returns
+  the raw query string (`code`, `state`, `error`) intact.
+- The main window navigates internally via React Router to `/sync/callback?<query>`, where
+  `BankSyncTab` completes the exchange on its existing authenticated loopback session. Closing the
+  popup window without completing resolves as cancelled so Sync stays responsive.
+- On desktop, the Enable Banking setup wizard (`EBStep4Redirect`, `EBStep2Credentials`) and Admin
+  section propose the fixed URL `https://localhost/sync/callback` and explain that it does not need
+  to exist or be reachable. Docker and web behaviour are unchanged.
+
+What remains to verify on a real Mac with a real Production Enable Banking application:
+1. Confirm the Enable Banking Control Panel accepts `https://localhost/sync/callback` in the
+   Allowed redirect URLs of a **Production** application (no public domain needed).
+2. Run a full end-to-end real bank authorization (including bank app/SMS 2FA and any intermediate
+   redirects) inside macOS `WKWebView` to confirm the final redirect triggers `on_navigation`
+   before any TLS error and that `BankSyncTab` exchanges the code and imports accounts cleanly.
+3. Verify how banks that attempt to open a new window/popup during 2FA behave with the popup's
+   `on_new_window` handoff to the system browser.
+
 ### Releases and updates (#591)
 
 Publishing a GitHub Release runs `.github/workflows/desktop-release.yml`. It builds the Windows
@@ -217,13 +257,31 @@ install) at the release tag, each on its own OS, signs them with the updater key
 them, their `.sig` and one `latest.json` listing all three to the release. `latest.json` is
 written only once all are built, so no platform is offered a half release. An installed app reads
 `https://github.com/<repo>/releases/latest/download/latest.json` once the backend is ready, then
-every 6 h, and offers "Install Picsou x.y.z" in the tray. The entry is disabled while the install
-runs, so a second click (or `--install-update`) is ignored; a failed install shows its reason in a
-banner of the main window and puts the entry back for a retry.
+every 6 h, and offers "Install Picsou x.y.z" in the tray **and** inside the main window.
+- **In-window banner and Settings controls**: the shell always registers `get_desktop_update_status`,
+  `check_desktop_update`, and `install_desktop_update` over Tauri IPC and checks `update::enabled`
+  at runtime: when the updater is disabled, `get_desktop_update_status` and `check_desktop_update`
+  return `enabled: false`, `install_desktop_update` returns an error, and the background watcher is
+  not started. When `update::enabled` is true, the shell also emits `desktop-update-status` to the
+  `main` window whenever the background watcher or an install changes state. When a newer release
+  is available, a quiet banner (`DesktopUpdateBanner`) appears at the top of the main content area
+  on every page with an Install action and a close button; dismissing it persists the version in
+  `useAppStore` so the banner stays hidden for that version and returns only for a newer one. In
+  **Settings → System**, "Check for updates" runs `check_desktop_update` (instead of the Docker
+  backend instance-status check) and shows either "Up to date" or the available version with an
+  Install button.
+- The tray entry and in-window Install buttons share the same serialized state (`UpdateState`), so
+  repeated clicks (or `--install-update`) are ignored while an install runs; a failed install
+  shows its reason in the main window and re-enables retrying.
 
 - The version comes from the tag (`1.3.0` or `v1.3.0`): `desktop_release.py stamp` writes it to
   `Cargo.toml`, which the bundle, the updater and the backups (#588) all read.
   `tauri.conf.json` carries no version on purpose.
+- Before uploading, the `publish` job copies each installer to a version-less name
+  (`Picsou-macOS-arm64.dmg`, `Picsou-Windows-x64.exe`, `Picsou-Linux-x64.AppImage`, with no `.sig`
+  file) while leaving the versioned files and `latest.json` untouched. The direct download links in
+  `README.md` point to `/releases/latest/download/<name>` for these three files and are verified
+  against the workflow by `.github/tests/test_desktop_release.py`.
 - Only the release build gets the updater config (`desktop_release.py config`, passed to
   `tauri build --config`). PR and dev builds have no public key, so they never check.
 - The plugin checks the download against the public key before anything stops.
@@ -266,6 +324,7 @@ SmartScreen still warns on the first install (see Windows above).
 - `desktop/src-tauri/src/upgrade.rs` — version marker, pre-upgrade `picsou.db` + `secrets/` backups (`0600`/`0700`), downgrade guard, restore, migration failure reading
 - `desktop/src-tauri/src/webview_bank/` — loopback HTTP bridge and native OS WebView bank connectors (Revolut, BNP Paribas / Hello bank!, Amex) with an `on_navigation` scheme filter and `on_page_load` main-frame host allowlists
 - `desktop/src-tauri/src/main.rs` — the window and the startup thread
+- `desktop/src-tauri/src/enable_banking.rs` — dedicated Enable Banking OAuth WebView window and `/sync/callback` navigation interception (#590)
 - `desktop/src-tauri/src/external.rs` — https links the page opens in a new window, handed to the system browser
 - `desktop/src-tauri/src/i18n.rs` — tray, restore and startup failure texts in the four languages
 - `desktop/src-tauri/src/sidecars.rs` — on-demand Chromium sidecars behind loopback ports

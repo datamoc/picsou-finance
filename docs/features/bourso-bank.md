@@ -1,6 +1,6 @@
 # Feature: BoursoBank sync
 
-> Last updated: 2026-11-20
+> Last updated: 2026-11-25
 > Status: ✅ **Validated end-to-end against a live BoursoBank account**
 > (2026-08-11) — login, dashboard, PEA with 9 positions, reconciled exactly.
 > See "Verification boundaries" for what that run did and did not exercise.
@@ -56,7 +56,8 @@ skipped — and *counted*, then logged, because a connector that quietly drops
 accounts is indistinguishable from one that is broken.
 
 **Current-account and livret transactions** are fetched from each dashboard
-card's own `/mouvements` page, for the last 90 days, and its IBAN from `/rib`.
+card's own `/mouvements` page, for the last 90 days, and its IBAN from the RIB
+page at `/compte/<id>/rib`.
 Every synced current-account and livret card (the banking and savings sections)
 gets both; loan, insurance, children's and third-party cards are skipped earlier,
 by `parse_dashboard`, and get neither request. Within what is synced the gate is
@@ -65,9 +66,16 @@ silently lose its history. Until #167 only `CHECKING` and `LEP` were read, and a
 Livret A, LDDS or Livret Bourso+ synced its balance with no operations. The
 sidecar preserves the card's exact URL and follows continuation tokens, capped
 at 20 pages. Booked rows carry their provider ID, date, signed amount and label;
-securities accounts and assurance-vie contracts remain holdings-only. The HTML selectors and `/rib` IBAN
-route follow the public Woob Boursorama connector, which reads livrets through
-the same history page as current accounts. New operation fixtures are explicitly
+securities accounts and assurance-vie contracts remain holdings-only. The HTML selectors
+follow the public Woob Boursorama connector, which reads livrets through
+the same history page as current accounts. The RIB page answers on the untyped
+`/compte/<id>/rib` only: the card's typed form, `/compte/cav/<id>/rib` or
+`/compte/epargne/csl/<id>/rib`, answers 404, though `/mouvements` accepts it. Until
+#772 the sidecar, and its in-process port the desktop app runs
+(`backend-rs/src/native_sidecars/bourso`), asked the typed form, so no account ever
+got an IBAN. An IBAN the sidecar cannot read (failed request, or no IBAN on the page) leaves the field empty
+and logs the fixed code `IBAN_UNAVAILABLE`, one line per account, with no URL or
+page content. New operation fixtures are explicitly
 synthetic, not a live BoursoBank capture. The CSV importer still accepts
 BoursoBank's own export.
 
@@ -96,8 +104,16 @@ keeps its balance, and triggers no further request.
 The backend first matches the sidecar external ID, then the IBAN on an active
 account in the explicit BoursoBank/Boursorama/Boursorama Banque provider family
 owned by the same member. It never matches account names or unrelated providers,
-and respects soft-deletion guards. Without a matching IBAN or
-external ID, existing separate account rows are not automatically merged.
+and respects soft-deletion guards. A deleted sidecar external ID stops the
+account there: the sidecar does not take over another row with the same IBAN, as
+Enable Banking does not for a deleted uid. A sidecar account whose IBAN read
+failed (`IBAN_UNAVAILABLE`) matches nothing by IBAN and gets its own row, and an
+Enable Banking connection cannot adopt that row either. Without a matching IBAN or
+external ID, existing separate account rows are not automatically merged: two
+copies created before #772, one per connection, stay two rows once the IBAN
+arrives. Deleting one copy settles it, whichever is deleted: the deleted copy is
+not resurrected. If Enable Banking later rotates the account's uid, the new uid is
+not a deleted one, so that connection can still match the surviving row by IBAN.
 
 `SharedSidecarTransactionImportService` is reused by Bourso and Revolut. It
 checks the existing transaction IDs and the bounded provider-prefixed V88 key.
@@ -290,18 +306,23 @@ figures are split across them:
 
 ```text
 [ {id, label, headings[], account:{cash, valuation, total, gainLoss, …}, actions[]},
-  {id, label, headings[], actions[], positions:[…], count} ]
+  {id, label, headings[], actions[], positions:[…], count},
+  {id, funds:[…]} ]
 ```
 
 Reading `positions` off the same section as `account` finds a funded account with
-no lines — which is exactly how this first failed in the wild. Each is therefore
-taken from whichever section carries it, and the richest positions list wins
-(a section can carry an empty one, which would look just like a cash-only
-account). Some accounts split their lines across several populated sections; when
-the richest list does not reconcile with `valuation`, the union of all lists is
-tried. Before reconciling, repeated holdings are identified by ISIN (or the
-case-insensitive broker symbol when no ISIN is usable). Equal normalized rows
-count once; conflicting rows for the same identity raise `INVALID_DATA`.
+no lines — which is exactly how this first failed in the wild. Managed/profiled
+PEA accounts also return an empty `positions` list and place their holdings in a
+separate `funds` list using the same position fields (with `gainLoss` optional,
+[#398](https://github.com/Cloeille/picsou-finance/issues/398)). Every `positions`
+and `funds` list is therefore collected across sections, and the richest list
+wins (a section can carry an empty one, which would look just like a cash-only
+account). Some accounts split their lines across several populated sections (or
+across `positions` and `funds`); when the richest list does not reconcile with
+`valuation`, the union of all lists is tried. Before reconciling, repeated
+holdings are identified by ISIN (or the case-insensitive broker symbol when no
+ISIN is usable). Equal normalized rows count once; conflicting rows for the same
+identity raise `INVALID_DATA`.
 The union also rejects rows sharing a case-insensitive broker symbol when only
 some have a usable ISIN. Missing or malformed ISINs must not give a repeated row
 a second identity, even if the backend would resolve the ISIN-bearing row to a
@@ -344,8 +365,8 @@ Refusals:
 - `UPSTREAM_FORMAT_CHANGED`: a payload mixing both shapes, zero or several `fund`
   nodes, or a fund with a missing or malformed ISIN, label or quantity. Mixing
   means a `cash`, `valuation` or `total` key beside the fund, even a null one, or
-  a non-empty `positions` list. An empty `positions` section is tolerated, as it
-  is for PEA and CTO accounts.
+  a non-empty `positions` or `funds` list. An empty `positions` or `funds`
+  section is tolerated, as it is for PEA and CTO accounts.
 - `INVALID_DATA`: a negative quantity or balance, or a `balance`, account or
   `gainLoss` currency other than EUR. A foreign gain would corrupt the cost basis
   the backend derives as `value − gain`. A node without a currency is read as EUR.
@@ -559,6 +580,8 @@ history and IBAN read for the current account and every livret kind (LDDS,
 Livret A, LEP, Livret Jeune, PEL, CEL and the house passbook), and the history
 deadline: a stalled `/mouvements` read still returns every balance and the PEA
 holdings, flags the accounts without history, and logs no URL, amount or IBAN.
+The mocked RIB page answers on `/compte/<id>/rib` only, 404 on the typed form, as
+the live site does (#772); an unread IBAN logs `IBAN_UNAVAILABLE` and nothing else.
 
 Backend — `BoursoAdapterTest` (18), `BoursoSyncServiceTest` (29),
 `BoursoControllerTest` (11), `BoursoAdapterWiringTest`, `BoursoSyncRecoveryTest`,
@@ -588,8 +611,9 @@ two-section payload shape, and the existence of a separate ISIN feed.
 - **`MFA_TYPE_UNSUPPORTED`** — no SMS prompt was seen;
 - the **ISIN-less fallback** and its **collision refusal** — every line on that
   account carried a valid ISIN;
-- **livret transactions** — the `/mouvements` and `/rib` pages of a livret
-  are assumed to share the current account's markup, as Woob reads them; a
+- **livret transactions** — the `/mouvements` page of a livret is assumed
+  to share the current account's markup, as Woob reads it (its RIB page was
+  observed parsing on a live instance in #772); a
   livret whose page differs keeps its balance and reports
   `TRANSACTIONS_UNAVAILABLE`;
 - a **livret** and a **compte-titres ordinaire** — the account held a current
@@ -605,6 +629,9 @@ two-section payload shape, and the existence of a separate ISIN feed.
   synced one successfully with an equivalent normalisation. Whether `quantity`
   always arrives as a bare value rather than a `{value, decimals}` node is taken
   from that report; a node fails closed with `UPSTREAM_FORMAT_CHANGED`.
+- a **managed PEA with holdings under `funds`** — modelled on the redacted shape
+  reported in [#398](https://github.com/Cloeille/picsou-finance/issues/398) with
+  synthetic fixtures; not verified against a live managed PEA login.
 - the **identity selector** — modelled on the
   [#153](https://github.com/Cloeille/picsou-finance/issues/153) description with
   synthetic HTML. The anchor shape, the label text and the business markers are

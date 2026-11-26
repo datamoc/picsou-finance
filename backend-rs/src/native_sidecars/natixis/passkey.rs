@@ -21,6 +21,7 @@ use super::contract::{NatixisError, PasskeyRequest, SessionResponse};
 use super::pending::LoginState;
 use super::{
     NativeNatixis, NatixisConfig, check_upstream, classify_transport, read_json, serialize_session,
+    status_message,
 };
 use crate::config::Config;
 use crate::native_sidecars::{NativeError, NativeResponse};
@@ -203,7 +204,7 @@ impl NativeNatixis {
             return Err(NatixisError::new(
                 StatusCode::UNAUTHORIZED,
                 "INVALID_CREDENTIALS",
-                format!("login modes answered {}", status.as_u16()),
+                status_message("login modes", status, response).await,
             ));
         }
         let body = read_json(response, "login modes").await?;
@@ -239,10 +240,9 @@ impl NativeNatixis {
         let status = response.status();
         check_upstream(status, "passkey options")?;
         if status != StatusCode::OK {
-            return Err(NatixisError::format_changed(format!(
-                "passkey options answered {}",
-                status.as_u16()
-            )));
+            return Err(NatixisError::format_changed(
+                status_message("passkey options", status, response).await,
+            ));
         }
         let body = read_json(response, "passkey options").await?;
         let mut options: Options = serde_json::from_value(body).map_err(|_| {
@@ -314,14 +314,13 @@ impl NativeNatixis {
             return Err(NatixisError::new(
                 StatusCode::UNAUTHORIZED,
                 "INVALID_CREDENTIALS",
-                format!("passkey check answered {}", status.as_u16()),
+                status_message("passkey check", status, response).await,
             ));
         }
         if !matches!(status, StatusCode::OK | StatusCode::CREATED) {
-            return Err(NatixisError::format_changed(format!(
-                "passkey check answered {}",
-                status.as_u16()
-            )));
+            return Err(NatixisError::format_changed(
+                status_message("passkey check", status, response).await,
+            ));
         }
         Ok(())
     }

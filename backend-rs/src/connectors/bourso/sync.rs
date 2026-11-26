@@ -134,6 +134,7 @@ pub struct PreparedAccount {
 #[derive(Debug, Clone)]
 struct PreparedPosition {
     ticker: String,
+    isin: Option<String>,
     name: String,
     quantity: Decimal,
     average_buy_in_eur: Option<Decimal>,
@@ -206,6 +207,9 @@ impl SyncStrategy for Strategy {
                 None,
                 account.positions.iter().map(|p| p.ticker.as_str()),
             );
+            for p in &account.positions {
+                needs.isin(p.isin.as_deref());
+            }
         }
         needs
     }
@@ -658,12 +662,13 @@ async fn prepare_positions(
                 "BoursoBank returned two instruments under one ticker",
             ));
         }
-        if let Some(isin) = isin {
-            isin_by_ticker.insert(ticker.clone(), isin);
+        if let Some(isin) = &isin {
+            isin_by_ticker.insert(ticker.clone(), isin.clone());
         }
         let resolved = PreparedPosition {
             name: limit(position.label.as_deref(), 100, &ticker),
             ticker,
+            isin: crate::ledger::model::normalize_isin(isin.as_deref()),
             quantity,
             average_buy_in_eur: position.buying_price_eur,
             current_price: position.current_price,
@@ -750,6 +755,7 @@ fn merge_positions(
     let quantity = left.quantity + right.quantity;
     Ok(PreparedPosition {
         ticker: left.ticker.clone(),
+        isin: left.isin.clone().or(right.isin),
         name: right.name,
         quantity,
         average_buy_in_eur: weighted_average(
@@ -843,9 +849,13 @@ async fn find_target(
     let verified = is_verified_iban(data.iban.as_deref());
     let mut existing =
         accounts::find_by_external_id_and_member(&mut *conn, &data.external_id, member_id).await?;
+    // A deleted external id is the member dropping this connector's copy, not a takeover of
+    // another connection's row with the same IBAN: Enable Banking follows the same rule.
     if existing.is_none()
         && verified
         && let Some(iban) = data.iban.as_deref()
+        && !accounts::exists_soft_deleted_by_external_id(&mut *conn, &data.external_id, member_id)
+            .await?
     {
         existing = accounts::find_first_by_iban_member_and_providers(
             &mut *conn,
@@ -926,6 +936,7 @@ async fn upsert_account(
         .iter()
         .map(|p| HoldingDraft {
             ticker: p.ticker.clone(),
+            isin: p.isin.clone(),
             name: Some(p.name.clone()),
             quantity: p.quantity,
             average_buy_in: p.average_buy_in_eur,

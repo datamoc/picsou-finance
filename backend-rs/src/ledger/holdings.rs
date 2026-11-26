@@ -147,6 +147,85 @@ pub async fn distinct_tickers<'e>(
     }
 }
 
+/// Distinct ISINs held on live non-crypto accounts: the lines priced by ISIN (#701).
+pub async fn distinct_isins<'e>(db: impl DbExec<'e>) -> sqlx::Result<Vec<String>> {
+    crate::db::query_scalar(
+        "SELECT DISTINCT h.isin FROM account_holding h JOIN account a ON a.id = h.account_id \
+         WHERE h.isin IS NOT NULL AND a.deleted_at IS NULL AND a.type <> $1::account_type \
+         ORDER BY h.isin",
+    )
+    .bind(AccountType::Crypto)
+    .fetch_all(db)
+    .await
+}
+
+/// Remembers that `ticker` names the instrument `isin` (#703), filling the ISIN of a
+/// security_profile row that has none, or seeding a row with that identity only. The ISIN must
+/// be normalised. A ticker that already names another ISIN keeps it: the first ISIN recorded
+/// for a ticker wins (security_profile.ticker is unique).
+pub async fn record_ticker_isin<'e>(
+    db: impl DbExec<'e>,
+    ticker: &str,
+    isin: &str,
+    now: DateTime<Utc>,
+) -> sqlx::Result<()> {
+    crate::db::query(
+        "INSERT INTO security_profile (ticker, asset_type, isin, status, created_at, updated_at) \
+         VALUES ($1, 'UNKNOWN', $2, 'NEVER_FETCHED', $3, $3) \
+         ON CONFLICT (ticker) DO UPDATE SET isin = EXCLUDED.isin, updated_at = EXCLUDED.updated_at \
+         WHERE security_profile.isin IS NULL",
+    )
+    .bind(ticker.to_uppercase())
+    .bind(isin)
+    .bind(now)
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+/// Gives each line that has no ISIN its own ticker when that ticker already has the shape of a
+/// non-crypto ISIN, or the ISIN security_profile records for its ticker (#703), matching the V156
+/// backfill so a line built from manual trades is priced by ISIN like a synced one. `account_id`
+/// narrows it to one account; `None` covers every live manual account. Crypto accounts and Trade
+/// Republic's `XF000...` crypto pseudo-ISINs are never linked.
+pub async fn link_known_isins<'e>(
+    db: impl DbExec<'e>,
+    account_id: Option<i64>,
+) -> sqlx::Result<u64> {
+    let scope = match account_id {
+        Some(_) => "a.id = $2",
+        None => "a.is_manual = true AND a.deleted_at IS NULL",
+    };
+    let ticker_is_isin = if db.is_sqlite() {
+        "length(UPPER(TRIM(account_holding.ticker))) = 12 \
+         AND UPPER(TRIM(account_holding.ticker)) GLOB '[A-Z][A-Z][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][0-9]' \
+         AND UPPER(TRIM(account_holding.ticker)) NOT LIKE 'XF000%'"
+    } else {
+        "UPPER(TRIM(account_holding.ticker)) ~ '^[A-Z]{2}[A-Z0-9]{9}[0-9]$' \
+         AND UPPER(TRIM(account_holding.ticker)) NOT LIKE 'XF000%'"
+    };
+    let sql = format!(
+        "UPDATE account_holding SET isin = CASE \
+         WHEN ({ticker_is_isin}) THEN UPPER(TRIM(account_holding.ticker)) \
+         ELSE (SELECT p.isin FROM security_profile p \
+         WHERE p.ticker = UPPER(TRIM(account_holding.ticker)) AND p.isin IS NOT NULL \
+         AND p.isin NOT LIKE 'XF000%') END \
+         WHERE isin IS NULL \
+         AND EXISTS (SELECT 1 FROM account a WHERE a.id = account_holding.account_id \
+         AND a.type <> $1::account_type AND {scope}) \
+         AND (({ticker_is_isin}) \
+         OR EXISTS (SELECT 1 FROM security_profile p \
+         WHERE p.ticker = UPPER(TRIM(account_holding.ticker)) AND p.isin IS NOT NULL \
+         AND p.isin NOT LIKE 'XF000%'))"
+    );
+    let query = crate::db::query(&sql).bind(AccountType::Crypto);
+    let query = match account_id {
+        Some(id) => query.bind(id),
+        None => query,
+    };
+    Ok(query.execute(db).await?.rows_affected())
+}
+
 pub async fn insert<'e>(
     db: impl DbExec<'e>,
     account_id: i64,
@@ -156,8 +235,8 @@ pub async fn insert<'e>(
     crate::db::query_as(&format!(
         "INSERT INTO account_holding (account_id, ticker, name, quantity, average_buy_in, current_price, \
          quote_currency, provider_value_eur, provider_price_date, provider_pnl_eur, last_synced_at, \
-         provider_wealth_tier, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, \
-         $13, $13) RETURNING {HOLDING_RETURNING}"
+         provider_wealth_tier, isin, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, \
+         $13, $14, $14) RETURNING {HOLDING_RETURNING}"
     ))
     .bind(account_id)
     .bind(&holding.ticker)
@@ -171,6 +250,7 @@ pub async fn insert<'e>(
     .bind(holding.provider_pnl_eur)
     .bind(holding.last_synced_at)
     .bind(holding.provider_wealth_tier)
+    .bind(&holding.isin)
     .bind(now)
     .fetch_one(db)
     .await
@@ -186,7 +266,7 @@ pub async fn update<'e>(
     crate::db::query_as(&format!(
         "UPDATE account_holding SET ticker = $2, name = $3, quantity = $4, average_buy_in = $5, \
          current_price = $6, quote_currency = $7, provider_value_eur = $8, provider_price_date = $9, \
-         provider_pnl_eur = $10, last_synced_at = $11, provider_wealth_tier = $12, updated_at = $13 \
+         provider_pnl_eur = $10, last_synced_at = $11, provider_wealth_tier = $12, isin = $13, updated_at = $14 \
          WHERE id = $1 RETURNING {HOLDING_RETURNING}"
     ))
     .bind(id)
@@ -201,6 +281,7 @@ pub async fn update<'e>(
     .bind(holding.provider_pnl_eur)
     .bind(holding.last_synced_at)
     .bind(holding.provider_wealth_tier)
+    .bind(&holding.isin)
     .bind(now)
     .fetch_one(db)
     .await
@@ -331,6 +412,7 @@ mod tests {
             provider_pnl_eur: None,
             last_synced_at: None,
             provider_wealth_tier: None,
+            isin: None,
             created_at: ts,
             updated_at: ts,
         }

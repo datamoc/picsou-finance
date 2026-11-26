@@ -5,13 +5,15 @@ import type { ReactNode } from 'react'
 import { QUERY_STALE_TIMES } from '@/lib/constants'
 import type { DashboardData } from '@/types/api'
 
-const { holdings, prices, list, updateScpiPosition, get, accountHistory } = vi.hoisted(() => ({
+const { holdings, prices, list, updateScpiPosition, updateOwnership, get, accountHistory, importExecute } = vi.hoisted(() => ({
   holdings: vi.fn(),
   prices: vi.fn(),
   list: vi.fn(),
   updateScpiPosition: vi.fn(),
+  updateOwnership: vi.fn(),
   get: vi.fn(),
   accountHistory: vi.fn(),
+  importExecute: vi.fn(),
 }))
 
 const { getHistory } = vi.hoisted(() => ({
@@ -25,7 +27,7 @@ const { dashboardGet, dashboardGetPnl, dashboardGetIntraday } = vi.hoisted(() =>
 }))
 
 vi.mock('./api', () => ({
-  accountsApi: { holdings, prices, list, updateScpiPosition, get, history: accountHistory },
+  accountsApi: { holdings, prices, list, updateScpiPosition, updateOwnership, get, history: accountHistory, importExecute },
 }))
 
 vi.mock('@/features/history/api', () => ({ historyApi: { getHistory } }))
@@ -33,7 +35,7 @@ vi.mock('@/features/dashboard/api', () => ({
   dashboardApi: { get: dashboardGet, getPnl: dashboardGetPnl, getIntraday: dashboardGetIntraday },
 }))
 
-const { useAccount, useAccountHistory, useHoldingsWithLivePrices, usePortfolio, useUpdateScpiPosition } = await import('./hooks')
+const { useAccount, useAccountHistory, useExecuteImport, useHoldingsWithLivePrices, usePortfolio, useUpdateOwnership, useUpdateScpiPosition } = await import('./hooks')
 const { useHistory } = await import('@/features/history/hooks')
 const { useDashboard, usePnl } = await import('@/features/dashboard/hooks')
 
@@ -347,6 +349,46 @@ describe('usePortfolio', () => {
     expect(byAccount(wallet.id)).toMatchObject({ valueEur: 10, costBasisEur: 10, pnlEur: 0 })
   })
 
+  it('exposes the holding ISIN on portfolio lines and null when absent', async () => {
+    list.mockResolvedValue([brokerage])
+    holdings.mockResolvedValue([
+      {
+        ticker: 'MULYF',
+        isin: 'LU1829219390',
+        name: 'Amundi Euro Stoxx Banks',
+        quantity: 80,
+        averageBuyIn: 3.81,
+        currentPrice: 4.41,
+        quoteCurrency: 'EUR',
+        currentValueEur: 352.8,
+        costBasisEur: 304.8,
+        pnlEur: 48,
+        pnlPercent: 15.75,
+        priceUpdatedAt: '2026-01-14T08:00:00Z',
+      },
+      {
+        ticker: 'AAPL',
+        name: 'Apple',
+        quantity: 1,
+        averageBuyIn: 180,
+        currentPrice: 200,
+        quoteCurrency: 'EUR',
+        currentValueEur: 200,
+        costBasisEur: 180,
+        pnlEur: 20,
+        pnlPercent: 11.11,
+        priceUpdatedAt: '2026-01-14T08:00:00Z',
+      },
+    ])
+    prices.mockResolvedValue({})
+
+    const { result } = renderHook(() => usePortfolio(), { wrapper: makeWrapper() })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.find(l => l.ticker === 'MULYF')?.isin).toBe('LU1829219390')
+    expect(result.current.data?.find(l => l.ticker === 'AAPL')?.isin).toBeNull()
+  })
+
   it('fails the query when an account\'s holdings cannot be loaded', async () => {
     list.mockResolvedValue([brokerage])
     holdings.mockRejectedValue(new Error('boom'))
@@ -460,11 +502,13 @@ describe('usePortfolio', () => {
     expect(line?.priceUpdatedAt).not.toBe('2026-08-19T08:00:00Z')
   })
 
-  it("adds the euro fund of a Caisse d'Epargne assurance vie, not of a manual one", async () => {
+  it('adds the euro fund of synced BPCE insurer assurance vie contracts even with a renamed provider, not of manual or other-provider ones', async () => {
     list.mockResolvedValue([
-      { id: 11, name: 'AV synced', type: 'ASSURANCE_VIE', provider: "Caisse d'Epargne", isManual: false, color: '#000', currentBalanceEur: 500, cashBalance: 300 },
+      { id: 11, name: 'AV CE renamed', type: 'ASSURANCE_VIE', provider: 'Custom insurer', isManual: false, isInsurerContract: true, color: '#000', currentBalanceEur: 500, cashBalance: 300 },
+      { id: 14, name: 'AV BP synced', type: 'ASSURANCE_VIE', provider: 'Banque Populaire Rives de Paris', isManual: false, isInsurerContract: true, color: '#000', currentBalanceEur: 700, cashBalance: 400 },
       { id: 13, name: 'AV hand-made', type: 'ASSURANCE_VIE', provider: "Caisse d'Epargne", isManual: true, color: '#000', currentBalanceEur: 500, cashBalance: 300 },
-      { id: 12, name: 'AV manual', type: 'ASSURANCE_VIE', provider: null, color: '#000', currentBalanceEur: 500, cashBalance: 300 },
+      { id: 15, name: 'AV CORUM', type: 'ASSURANCE_VIE', provider: 'CORUM', isManual: false, color: '#000', currentBalanceEur: 500, cashBalance: 300 },
+      { id: 12, name: 'AV manual', type: 'ASSURANCE_VIE', provider: null, isManual: true, color: '#000', currentBalanceEur: 500, cashBalance: 300 },
     ])
     holdings.mockResolvedValue([])
     prices.mockResolvedValue({})
@@ -475,6 +519,7 @@ describe('usePortfolio', () => {
     const funds = (result.current.data ?? []).filter(line => line.id.startsWith('per-euro-fund-'))
     expect(funds).toEqual([
       expect.objectContaining({ accountId: 11, nameKey: 'accounts.lifeEuroFundBalance', valueEur: 300 }),
+      expect.objectContaining({ accountId: 14, nameKey: 'accounts.lifeEuroFundBalance', valueEur: 400 }),
     ])
   })
 
@@ -720,6 +765,83 @@ describe('useUpdateScpiPosition', () => {
     await act(() => result.current.mutateAsync({ id: 42, data }))
 
     expect(updateScpiPosition).toHaveBeenCalledWith(42, data)
+    for (const key of keys) {
+      expect(client.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(true)
+    }
+    for (const key of unrelatedKeys) {
+      expect(client.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(false)
+    }
+  })
+})
+
+describe('useUpdateOwnership', () => {
+  it('invalidates the loan summary query for the updated account', async () => {
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const keys = [
+      ['accounts'],
+      ['accounts', 42, 'ownership'],
+      ['loan-summary', 42],
+      ['real-estate', 'summary'],
+      ['dashboard'],
+      ['history', [42], 12, true],
+    ]
+    const unrelatedKeys = [['loan-summary', 99]]
+    keys.forEach(key => client.setQueryData(key, { previous: true }))
+    unrelatedKeys.forEach(key => client.setQueryData(key, { previous: true }))
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    updateOwnership.mockResolvedValue({ shares: [], totalAssigned: 100, unassigned: 0 })
+    const { result } = renderHook(() => useUpdateOwnership(), { wrapper })
+    const data = { shares: [{ memberId: 1, sharePercent: 50 }, { memberId: 2, sharePercent: 50 }] }
+    await act(() => result.current.mutateAsync({ id: 42, data }))
+
+    expect(updateOwnership).toHaveBeenCalledWith(42, data)
+    for (const key of keys) {
+      expect(client.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(true)
+    }
+    for (const key of unrelatedKeys) {
+      expect(client.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(false)
+    }
+  })
+})
+
+describe('useExecuteImport', () => {
+  it('invalidates accounts, budget, dashboard, and account-scoped queries after an import', async () => {
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const keys = [
+      ['accounts'],
+      ['accounts', 42],
+      ['accounts', 42, 'transactions'],
+      ['accounts', 42, 'holdings'],
+      ['accounts', 42, 'history'],
+      ['accounts', 42, 'realized-pnl'],
+      ['budget'],
+      ['budget', 'summary'],
+      ['dashboard'],
+    ]
+    const unrelatedKeys = [['goals']]
+    keys.forEach(key => client.setQueryData(key, { previous: true }))
+    unrelatedKeys.forEach(key => client.setQueryData(key, { previous: true }))
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    importExecute.mockResolvedValue({ imported: 2, skipped: 0, errors: [], duplicates: 0 })
+    const { result } = renderHook(() => useExecuteImport(42), { wrapper })
+    const payload = {
+      fileToken: 'tok-1',
+      mapping: {
+        date: 0, side: null, tickerOrIsin: null, name: null, quantity: null, unitPrice: null,
+        fees: null, currency: null, amount: 2, description: 1, debit: null, credit: null,
+      },
+      dialect: { delimiter: ';', decimal: 'COMMA' as const, dateFormat: 'dd/MM/yyyy' },
+      hasHeaderRow: true,
+      feesIncludedInAmount: false,
+      invertSign: false,
+    }
+    await act(() => result.current.mutateAsync(payload))
+
+    expect(importExecute).toHaveBeenCalledWith(42, payload)
     for (const key of keys) {
       expect(client.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(true)
     }

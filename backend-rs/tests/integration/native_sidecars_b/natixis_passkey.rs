@@ -571,6 +571,29 @@ async fn the_passkey_routes_need_a_signed_in_member_and_an_e_mail() {
     assert!(behaviour.lock().unwrap().requests.is_empty());
 }
 
+/// A passkey sign-in is a sign-in: it draws from the same budget as a password one.
+#[tokio::test]
+async fn passkey_and_password_sign_ins_share_one_attempt_budget() {
+    let (server, _behaviour) = fake_natixis().await;
+    let app = desktop_app(&server, false).await;
+    let client = app.login_admin().await;
+    let passkey = json!({ "email": EMAIL });
+
+    for _ in 0..5 {
+        let response = client.post(PASSKEY_ROUTE).json(&passkey).send().await;
+        assert_eq!(response.status, 422, "{}", response.text());
+    }
+    let sixth = client.post(PASSKEY_ROUTE).json(&passkey).send().await;
+    let password = client
+        .post("/api/natixis/auth/initiate")
+        .json(&json!({ "email": EMAIL, "password": "pw" }))
+        .send()
+        .await;
+
+    assert_eq!(sixth.status, 429, "{}", sixth.text());
+    assert_eq!(password.status, 429, "{}", password.text());
+}
+
 #[tokio::test]
 async fn a_disconnect_while_the_prompt_is_open_voids_the_login() {
     let (server, behaviour) = fake_natixis().await;

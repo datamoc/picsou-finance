@@ -56,7 +56,7 @@ ALTER TABLE transaction
 `TransactionType` enum: `DEPOSIT`, `WITHDRAWAL`, `BUY`, `SELL`, `DIVIDEND`, `FEE`.
 
 - Cash accounts (CHECKING, SAVINGS, LEP, OTHER): use DEPOSIT / WITHDRAWAL. The `amount` field is signed (positive = deposit, negative = withdrawal).
-- Investment accounts (PEA, COMPTE_TITRES, CRYPTO): use BUY / SELL. The `amount` is signed (negative for BUY, positive for SELL, reflecting cash flow).
+- Investment accounts (PEA, COMPTE_TITRES, CRYPTO, ASSURANCE_VIE, PER, PRECIOUS_METALS, BROKERAGE): use BUY / SELL. The `amount` is signed (negative for BUY, positive for SELL, reflecting cash flow).
 
 ### Entering a position by ISIN
 
@@ -67,6 +67,22 @@ On an investment account, the instrument field accepts **either** a Yahoo ticker
 - the resolver persists the resolved name or canonical ticker as a language-neutral description.
   A successfully resolved ISIN is replaced by the Yahoo ticker and never appears in the row.
   `TransactionResponse.txType` lets the frontend add the localized transaction label (see Gotchas).
+
+**The ISIN stays the identity (#703).** The entered ISIN (check digit valid, not a crypto
+`XF000…` pseudo-ISIN, not on a crypto account) is recorded against the ticker it resolved to in
+`security_profile` (`holdings::record_ticker_isin`, which never overwrites an ISIN the ticker
+already has). `recompute_holdings` then gives every line without an ISIN the one recorded for its
+ticker (`holdings::link_known_isins`), so the line carries `account_holding.isin` and is priced by
+ISIN (see [isin-pricing.md](isin-pricing.md)). This also covers trades entered under the ticker
+itself once its ISIN is known. At startup, `link_manual_holding_isins` links the lines of every
+live manual account the same way, for trades stored before #703. `isin_ticker_repair` records
+the ISIN it repairs against the ticker it finds, so a repaired line keeps it too. The first ISIN
+recorded for a ticker wins (`security_profile.ticker` is unique): a second ISIN that OpenFIGI maps
+to the same ticker is priced by the first. Linking only fills a line with no ISIN; it never
+rewrites one. An ISIN OpenFIGI cannot resolve stays the ticker and is recorded against itself, so
+the line still carries it. Crypto accounts never take an ISIN. Old trades entered by ISIN before
+#703 are linked when a connector or the repair pass recorded that ISIN for their ticker, or when
+their ticker is still the raw ISIN (on any account but crypto, never an `XF000` pseudo-ISIN).
 
 A user-supplied "Nom" always wins over the resolved name. The same logic runs for both add and edit (`addTransaction` and `updateTransaction` share `applyInstrumentFields`).
 
@@ -95,7 +111,7 @@ inherits the rule.
 
 ### Holdings derivation (investment accounts)
 
-`HoldingComputeService.recomputeHoldings(account)` is called after every manual transaction add, edit, or delete on a **manual** PEA, COMPTE_TITRES, or CRYPTO account. Synced investment accounts preserve provider-owned positions when manual transaction annotations change:
+`HoldingComputeService.recomputeHoldings(account)` is called after every manual transaction add, edit, or delete on a **manual** investment account (PEA, COMPTE_TITRES, CRYPTO, ASSURANCE_VIE, PER, PRECIOUS_METALS, or BROKERAGE). Synced investment accounts preserve provider-owned positions when manual transaction annotations change:
 
 1. Fetches all BUY/SELL transactions for the account, ordered by date ASC.
 2. Groups by ticker: `net quantity = Σ(BUY qty) − Σ(SELL qty)`.
@@ -139,7 +155,7 @@ Bank-synced transactions (`isManual = false`) are read-only for amount, date, an
 **Cash accounts (CHECKING, SAVINGS, LEP, OTHER):**
 - Date, DEPOSIT/WITHDRAWAL toggle, Description, Amount (always positive — toggle sets sign), Category (optional dropdown — pre-filled from existing category when editing)
 
-**Investment accounts (PEA, COMPTE_TITRES, CRYPTO):**
+**Investment accounts (PEA, COMPTE_TITRES, CRYPTO, ASSURANCE_VIE, PER, PRECIOUS_METALS, BROKERAGE):**
 - Date, BUY/SELL toggle, **Ticker ou ISIN** (a ticker like `IWDA.AS` or a 12-char ISIN like `IE00B4L5Y983`), Name (auto-filled from existing holdings when the ticker matches; otherwise resolved from the ISIN backend-side), Quantity, Price per unit, **Fees (optional, folded into the PMP)**, Total (read-only)
 
 The Transactions list groups rows by booking date. Headings stay compact for a single-year list;

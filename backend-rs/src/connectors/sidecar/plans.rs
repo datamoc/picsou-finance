@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256};
 use super::error::SyncError;
 use super::template::error;
 use crate::ledger::decimal::{HALF_UP, divide};
-use crate::ledger::model::HoldingDraft;
+use crate::ledger::model::{HoldingDraft, normalize_isin};
 use crate::ledger::sidecar::SidecarErrorCode;
 use crate::ledger::sync_values::{clean, limit, money_close, sum_complete, weighted_average};
 
@@ -73,6 +73,8 @@ pub struct PreparedPlan {
     pub external_id: String,
     pub legacy_external_ids: Vec<String>,
     pub name: String,
+    /// The plan's own label, the start of `name` before any employer.
+    pub label: String,
     pub balance_eur: Decimal,
     pub invested_amount_eur: Decimal,
     positions: Vec<PreparedPosition>,
@@ -81,6 +83,7 @@ pub struct PreparedPlan {
 #[derive(Debug, Clone)]
 struct PreparedPosition {
     ticker: String,
+    isin: Option<String>,
     name: String,
     quantity: Decimal,
     average_buy_in_eur: Option<Decimal>,
@@ -96,6 +99,7 @@ impl PreparedPlan {
             .iter()
             .map(|p| HoldingDraft {
                 ticker: p.ticker.clone(),
+                isin: p.isin.clone(),
                 name: Some(p.name.clone()),
                 quantity: p.quantity,
                 average_buy_in: p.average_buy_in_eur,
@@ -171,6 +175,7 @@ impl PlanRules {
                 external_id,
                 legacy_external_ids,
                 name: self.account_name(&plan),
+                label: self.plan_label(&plan),
                 balance_eur,
                 invested_amount_eur,
                 positions,
@@ -203,6 +208,7 @@ impl PlanRules {
             let resolved = PreparedPosition {
                 name: limit(position.label.as_deref(), 100, &ticker),
                 ticker: ticker.clone(),
+                isin: normalize_isin(position.isin.as_deref()),
                 quantity,
                 average_buy_in_eur,
                 unit_value: position.unit_value,
@@ -217,6 +223,7 @@ impl PlanRules {
                     let total = left.quantity + resolved.quantity;
                     *left = PreparedPosition {
                         ticker: left.ticker.clone(),
+                        isin: left.isin.clone().or_else(|| resolved.isin.clone()),
                         name: left.name.clone(),
                         quantity: total,
                         average_buy_in_eur: weighted_average(
@@ -240,10 +247,14 @@ impl PlanRules {
         Ok(positions)
     }
 
-    fn account_name(&self, plan: &PlanData) -> String {
-        let base = clean(plan.name.as_deref())
+    fn plan_label(&self, plan: &PlanData) -> String {
+        clean(plan.name.as_deref())
             .or_else(|| clean(plan.plan_kind.as_deref()))
-            .unwrap_or_else(|| self.default_name.to_owned());
+            .unwrap_or_else(|| self.default_name.to_owned())
+    }
+
+    fn account_name(&self, plan: &PlanData) -> String {
+        let base = self.plan_label(plan);
         let composed = match clean(plan.employer.as_deref()) {
             Some(employer) if !base.to_lowercase().contains(&employer.to_lowercase()) => {
                 format!("{base} — {employer}")

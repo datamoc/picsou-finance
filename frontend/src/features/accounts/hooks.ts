@@ -19,6 +19,8 @@ export interface PortfolioLine {
   /** Translation key for a synthetic portfolio label, when it is not a provider name. */
   nameKey?: string
   ticker: string | null
+  /** The key the line's price history is recorded under when it has one (#702). */
+  isin?: string | null
   /** Cash-only rows have a balance but no tradable unit-price detail view. */
   isCash?: boolean
   /** The holding's mark, as in `HoldingResponse`. Absent on the aggregated cash row. */
@@ -171,6 +173,7 @@ export function usePortfolio() {
             id: `${account.id}-${h.ticker}`,
             name: h.name ?? h.ticker,
             ticker: h.ticker,
+            isin: h.isin ?? null,
             logoUrl: h.logoUrl,
             logoUrlDark: h.logoUrlDark,
             quantity: h.quantity,
@@ -192,7 +195,7 @@ export function usePortfolio() {
       )
       lines.push(...holdingResults.flat())
 
-      // PER accounts, and assurance vie imported from the Caisse d'Epargne, keep the euro-fund
+      // PER accounts, and synced BPCE insurer assurance vie contracts, keep the euro-fund
       // balance separately from their account total. Do not use currentBalanceEur here: it
       // already includes unit-linked holdings in the same contract.
       for (const account of accounts) {
@@ -668,6 +671,7 @@ export function useUpdateOwnership() {
     invalidates: (_data, variables) => [
       ['accounts'],
       ['accounts', variables.id, 'ownership'],
+      ['loan-summary', variables.id],
       ['real-estate'],
       ['dashboard'],
       ['history'],
@@ -765,6 +769,8 @@ export function useExecuteImport(accountId: number) {
       ['accounts', accountId, 'history'],
       ['accounts', accountId, 'realized-pnl'],
       ['accounts', accountId],
+      ['accounts'],
+      ['budget'],
       ['dashboard'],
     ],
   })

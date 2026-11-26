@@ -412,6 +412,8 @@ export interface Account {
   scpi?: ScpiPosition | null
   /** Insurer-reported contract figures (a synced assurance-vie); null when the provider reports none. */
   contract?: LifeContract | null
+  /** True for a synced BPCE insurer contract (Caisse d'Epargne or Banque Populaire PER / assurance-vie). */
+  isInsurerContract?: boolean
 }
 
 /**
@@ -923,6 +925,8 @@ export interface Institution {
 
 export interface HoldingResponse {
   ticker: string
+  /** The line's ISIN on a non-crypto account: its price history is recorded under it (#702). */
+  isin?: string | null
   name: string | null
   // The image to show beside the ticker, or null when the asset has no known logo. A crypto
   // mark is a CoinGecko URL; a share or fund mark is Picsou's own /api/instrument-logos
@@ -2338,7 +2342,13 @@ export interface ColumnMappingDto {
   fees: number | null
   currency: number | null
   amount: number | null
+  description: number | null
+  debit: number | null
+  credit: number | null
 }
+
+/** Picked by the account type: trades on an investment account, cash lines everywhere else. */
+export type TransactionImportMode = 'TRADES' | 'CASH'
 
 export interface TransactionImportPreviewResponse {
   fileToken: string
@@ -2348,6 +2358,7 @@ export interface TransactionImportPreviewResponse {
   hasHeaderRow: boolean
   dialect: CsvDialectDto
   suggestedMapping: ColumnMappingDto
+  mode: TransactionImportMode
 }
 
 export interface TransactionImportRequest {
@@ -2357,6 +2368,7 @@ export interface TransactionImportRequest {
   hasHeaderRow: boolean
   feesIncludedInAmount: boolean
   sideValueMap?: Record<string, string>
+  invertSign: boolean
 }
 
 export interface ImportRowError {
@@ -2368,6 +2380,8 @@ export interface TransactionImportResultResponse {
   imported: number
   skipped: number
   errors: ImportRowError[]
+  /** Cash lines the account already held, left out: not errors, not in `skipped`. */
+  duplicates: number
 }
 
 // --- Realized P&L (closed positions) ---

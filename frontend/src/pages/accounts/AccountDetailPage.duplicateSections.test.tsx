@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, vi, beforeEach, type MockInstance } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import type { Account, HoldingResponse } from '@/types/api'
@@ -35,6 +35,7 @@ vi.mock('@/features/accounts/hooks', () => ({
 vi.mock('@/features/budget/hooks', () => ({
   useCategories: () => ({ data: [] }),
   useCategorize: () => idle,
+  useMerchantLogoUrl: () => () => null,
 }))
 vi.mock('@/features/history/hooks', () => ({ useHistory: () => ({ data: undefined }) }))
 vi.mock('@/features/savings/hooks', () => ({ useSavingsSuggestions: () => ({ data: undefined }) }))

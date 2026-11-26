@@ -1,9 +1,14 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
+import { useAppStore } from '@/stores/app-store'
+import de from '@/i18n/locales/de.json'
+import en from '@/i18n/locales/en.json'
+import es from '@/i18n/locales/es.json'
+import fr from '@/i18n/locales/fr.json'
 
 const { apiGet, apiPost, apiDelete } = vi.hoisted(() => ({
   apiGet: vi.fn(),
@@ -147,7 +152,7 @@ describe('BankSyncTab Wise connection', () => {
     apiGet.mockReset()
   })
 
-  it('says the Jars are missing under a Wise row and opens the Wise Jars connector', async () => {
+  it('shows the Wise Jars hint under a Wise row and opens the Wise Jars connector', async () => {
     const onOpenWiseJars = vi.fn()
     givenStatuses([WISE_CONNECTION], WISE_DISCONNECTED)
 
@@ -187,5 +192,217 @@ describe('BankSyncTab Wise connection', () => {
     await screen.findByText('Bank A')
     expect(screen.queryByText('sync.banks.wiseJarsMissing')).not.toBeInTheDocument()
     expect(apiGet).not.toHaveBeenCalledWith('/wise/status')
+  })
+})
+
+describe('Wise Jars copy across locales (#761)', () => {
+  const locales = { fr, en, de, es } as const
+
+  // None of these strings may still claim Enable Banking / the bank connection cannot see Wise Jars.
+  const categoricalMissing = {
+    fr: /ne passent pas par cette connexion|ne les voit pas|non couvertes/i,
+    en: /do not come through this connection|cannot see/i,
+    de: /kommen nicht über diese Verbindung|sieht sie nicht|nicht sieht/i,
+    es: /no llegan por esta conexión|no los ve|no ve/i,
+  }
+
+  const doubleCountWarning = {
+    fr: /en double/i,
+    en: /twice/i,
+    de: /doppelt/i,
+    es: /por duplicado/i,
+  }
+
+  const notBothWarning = {
+    fr: /pas les deux/i,
+    en: /not connect both/i,
+    de: /nicht beide/i,
+    es: /no conectes ambos/i,
+  }
+
+  it.each(Object.entries(locales))(
+    '%s explains Enable Banking Control Panel selection and warns against double counting',
+    (lang, locale) => {
+      const key = lang as keyof typeof locales
+      const hints = [
+        locale.sync.banks.wiseJarsMissing,
+        locale.sync.banks.wiseJarsConnected,
+        locale.sync.wise.intro,
+      ]
+
+      for (const text of hints) {
+        expect(text).not.toMatch(categoricalMissing[key])
+        expect(text).toMatch(/Enable Banking/)
+        expect(text).toMatch(/Control Panel/)
+        expect(text).toMatch(doubleCountWarning[key])
+      }
+
+      expect(locale.addAccount.desc.wise).not.toMatch(categoricalMissing[key])
+      expect(locale.addAccount.desc.wise).toMatch(/Enable Banking/)
+      expect(locale.addAccount.desc.wise).toMatch(notBothWarning[key])
+    },
+  )
+})
+
+describe('BankSyncTab Enable Banking auth launch (desktop vs web)', () => {
+  const AUTH_LINK = 'https://tilisy.enablebanking.com/auth/session-123'
+  const originalLocation = window.location
+  let assignedHref: string | null = null
+
+  function stubLocation() {
+    assignedHref = null
+    const loc = {
+      ...originalLocation,
+      pathname: '/sync',
+      search: '?tab=banks',
+      get href() {
+        return assignedHref ?? 'http://127.0.0.1:41234/sync?tab=banks'
+      },
+      set href(value: string) {
+        assignedHref = value
+      },
+    }
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: loc,
+    })
+  }
+
+  function clearTauriGlobals() {
+    delete (window as Window & { isTauri?: boolean }).isTauri
+    delete (window as Window & { __TAURI__?: unknown }).__TAURI__
+  }
+
+  beforeEach(() => {
+    stubLocation()
+    clearTauriGlobals()
+    useAppStore.setState({ desktopMode: false })
+    apiGet.mockReset()
+    apiPost.mockReset()
+    apiDelete.mockReset()
+    apiGet.mockImplementation((url: string) => {
+      if (url === '/sync/status') return Promise.resolve({ data: FAILED_CONNECTIONS })
+      if (url === '/sync/countries') return Promise.resolve({ data: ['FR'] })
+      if (url === '/sync/institutions') {
+        return Promise.resolve({
+          data: [{ id: 'BNP::FR::personal', name: 'BNP Paribas', country: 'FR', psuType: 'personal' }],
+        })
+      }
+      return Promise.reject(new Error(`Unexpected GET ${url}`))
+    })
+  })
+
+  afterEach(() => {
+    clearTauriGlobals()
+    useAppStore.setState({ desktopMode: false })
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: originalLocation,
+    })
+  })
+
+  it('invokes the Tauri command on desktop without leaving the main window and completes the callback', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      status: 'callback',
+      query: 'code=eb-code-42&state=eb-state-99',
+    })
+    useAppStore.setState({ desktopMode: true })
+    ;(window as Window & { isTauri?: boolean; __TAURI__?: unknown }).isTauri = true
+    ;(window as Window & { __TAURI__?: unknown }).__TAURI__ = { core: { invoke } }
+
+    apiPost.mockImplementation((url: string) => {
+      if (url === '/sync/initiate') return Promise.resolve({ data: { requisitionId: 'req-1', authLink: AUTH_LINK } })
+      if (url === '/sync/complete') return Promise.resolve({ data: [] })
+      return Promise.reject(new Error(`Unexpected POST ${url}`))
+    })
+
+    renderTab()
+    const searchInput = await screen.findByPlaceholderText('sync.banks.searchPlaceholder')
+    fireEvent.change(searchInput, { target: { value: 'BNP' } })
+    const connectBtn = await screen.findByRole('button', { name: 'sync.banks.connect' })
+    fireEvent.click(connectBtn)
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('open_enable_banking_auth', { authLink: AUTH_LINK })
+    })
+    expect(assignedHref).toBeNull()
+    await waitFor(() => {
+      expect(apiPost).toHaveBeenCalledWith('/sync/complete', {
+        code: 'eb-code-42',
+        state: 'eb-state-99',
+      })
+    })
+  })
+
+  it('re-enables Sync cleanly when the user closes the desktop auth window without completing', async () => {
+    const authWindow = deferred<{ status: 'cancelled' }>()
+    const invoke = vi.fn().mockReturnValue(authWindow.promise)
+    useAppStore.setState({ desktopMode: true })
+    ;(window as Window & { isTauri?: boolean; __TAURI__?: unknown }).isTauri = true
+    ;(window as Window & { __TAURI__?: unknown }).__TAURI__ = { core: { invoke } }
+
+    apiPost.mockImplementation((url: string) => {
+      if (url === '/sync/1/reconnect') return Promise.resolve({ data: { requisitionId: 'req-2', authLink: AUTH_LINK } })
+      return Promise.reject(new Error(`Unexpected POST ${url}`))
+    })
+
+    renderTab()
+    await screen.findByText('Bank A')
+    fireEvent.click(reconnectButton('Bank A'))
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith('open_enable_banking_auth', { authLink: AUTH_LINK })
+      expect(reconnectButton('Bank A')).toBeDisabled()
+    })
+    expect(assignedHref).toBeNull()
+
+    await act(async () => authWindow.resolve({ status: 'cancelled' }))
+    await waitFor(() => {
+      expect(reconnectButton('Bank A')).toBeEnabled()
+    })
+    expect(apiPost).not.toHaveBeenCalledWith('/sync/complete', expect.anything())
+  })
+
+  it('surfaces an OAuth error returned by the desktop callback query', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      status: 'callback',
+      query: 'error=access_denied&error_description=Bank+cancelled',
+    })
+    useAppStore.setState({ desktopMode: true })
+    ;(window as Window & { isTauri?: boolean; __TAURI__?: unknown }).isTauri = true
+    ;(window as Window & { __TAURI__?: unknown }).__TAURI__ = { core: { invoke } }
+
+    apiPost.mockImplementation((url: string) => {
+      if (url === '/sync/initiate') return Promise.resolve({ data: { requisitionId: 'req-1', authLink: AUTH_LINK } })
+      return Promise.reject(new Error(`Unexpected POST ${url}`))
+    })
+
+    renderTab()
+    const searchInput = await screen.findByPlaceholderText('sync.banks.searchPlaceholder')
+    fireEvent.change(searchInput, { target: { value: 'BNP' } })
+    const connectBtn = await screen.findByRole('button', { name: 'sync.banks.connect' })
+    fireEvent.click(connectBtn)
+
+    expect(await screen.findByText('sync.banks.callbackError: Bank cancelled')).toBeInTheDocument()
+    expect(apiPost).not.toHaveBeenCalledWith('/sync/complete', expect.anything())
+  })
+
+  it('keeps window.location navigation unchanged outside desktop', async () => {
+    apiPost.mockImplementation((url: string) => {
+      if (url === '/sync/initiate') return Promise.resolve({ data: { requisitionId: 'req-1', authLink: AUTH_LINK } })
+      return Promise.reject(new Error(`Unexpected POST ${url}`))
+    })
+
+    renderTab()
+    const searchInput = await screen.findByPlaceholderText('sync.banks.searchPlaceholder')
+    fireEvent.change(searchInput, { target: { value: 'BNP' } })
+    const connectBtn = await screen.findByRole('button', { name: 'sync.banks.connect' })
+    fireEvent.click(connectBtn)
+
+    await waitFor(() => {
+      expect(assignedHref).toBe(AUTH_LINK)
+    })
   })
 })

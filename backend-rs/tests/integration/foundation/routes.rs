@@ -42,7 +42,9 @@ const FRAMEWORK_ROUTES: &[(&str, &str)] = &[
     ("POST", "/api/revolut/webview/start"),
     ("GET", "/api/revolut/webview/status/{}"),
     ("POST", "/api/revolut/webview/cancel/{}"),
-    // Natixis passkey sign-in through the desktop shell (additive, not in Java).
+    // Additive Rust endpoints (not in Java).
+    ("POST", "/api/admin/settings/ai/models"),
+    // Natixis passkey sign-in through the desktop shell.
     ("GET", "/api/natixis/auth/passkey"),
     ("POST", "/api/natixis/auth/passkey"),
 ];

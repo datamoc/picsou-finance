@@ -7,12 +7,109 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Price history by ISIN.** A holding that carries an ISIN now has its daily history recorded
+  under the ISIN from the ISIN sources (justETF, Yahoo on the reference listing, Boursorama), and
+  the holding chart, the range P&L and the 24H chart read it. On the 24H chart such a line stays
+  flat at its current value (ISIN quote first, else the bank's value) instead of following the
+  hourly series of a ticker that may name another listing (#702).
+- **Manual entries and CSV imports keep the ISIN.** A buy or sell entered by ISIN, by hand or in
+  a CSV import, now keeps the ISIN on its line and is priced by it, instead of only through the
+  ticker it resolved to. Manual lines stored under a ticker whose ISIN is known are linked to it
+  at startup (#703).
+
 ### Added
 
 - **Natixis Interépargne: sign in with a passkey (Picsou Desktop for Windows).** Type your e-mail,
   then confirm with Windows Hello or your security key: no password and no code. Picsou uses a
   passkey you already have, never creates one, and keeps the same session as a password login.
-  Docker and Helm installs keep the password login. (#688)
+  Docker and Helm installs keep the password login.
+- **French life-insurance companies in the manual account provider picker (#798).** When adding or
+  editing a manual assurance vie or PER account, the provider field now suggests the main French
+  insurers (CNP Assurances, Suravenir, Groupama, Abeille Assurances, Generali, Spirica, AXA,
+  Allianz, Predica, Cardif, Sogecap, MACIF, MAIF, Apicil, SwissLife, AG2R La Mondiale) so
+  hand-entered contracts can pick their insurer without requiring bank sync.
+- **In-window Desktop update banner and check.** Picsou Desktop now surfaces available updates
+  directly in the main window with a dismissible top banner (remembered per version) and wires the
+  Settings → System "Check for updates" button to the Tauri updater, showing either "Up to date"
+  or the available version with a direct Install button.
+
+### Fixed
+
+- **Enable Banking callback on Picsou Desktop (#590).** Connecting or reconnecting a bank through
+  Enable Banking in the desktop app now opens the bank's authorization flow in a dedicated
+  "Enable Banking" WebView window instead of navigating the main window away. Any redirect whose
+  path ends with `/sync/callback` is intercepted and cancelled before loading, closing the popup
+  and forwarding the callback query to the main window so `BankSyncTab` finishes linking in place.
+  Closing the window early returns control to Sync cleanly, and the desktop setup wizard now
+  proposes the fixed `https://localhost/sync/callback` URL (which does not need to exist). Docker
+  and web installs are unchanged.
+- **Accounts page header actions wrap on mobile (#800).** The Export data, Add account, Reorder,
+  and tab-specific buttons in the Accounts page header now wrap across lines on narrow screens
+  (matching the Account detail page header) instead of staying forced onto a single row.
+- **Crédit Mutuel Épargne Salariale syncs again.** The site, now "Crédit Mutuel Épargne et
+  Retraite Entreprises", moved the saver's space and stopped showing the saver number; every sync
+  failed with an upstream format error. Plans now take an id without that number, and an
+  account imported before moves to it with its history.
+- **BPCE insurer contract classification after provider rename (#487).** Caisse d'Epargne and
+  Banque Populaire synced PER and assurance-vie contracts are now classified from their stable
+  sync provenance (`ce_` / `bp_` external account ID prefix) and exposed via `isInsurerContract`
+  on account responses, keeping insurer valuation, history, and euro-fund display intact when the
+  user edits the account's provider label.
+- **Wise Jars copy warns against double counting with Enable Banking (#761).** The hint under a Wise
+  connection on the Banks tab, the Wise Jars connector introduction, and the add-account card no
+  longer claim that Enable Banking cannot see Wise Jars; they now explain that jars appear through
+  Enable Banking when selected in the Enable Banking Control Panel and warn members to use one
+  source or the other, not both.
+- **BoursoBank: accounts now get their IBAN** (#772). The sidecar, and the desktop app's built-in
+  BoursoBank connector, asked for the RIB page on a path BoursoBank answers with a 404, so no
+  current account or livret ever got an IBAN, and nothing said so. It now reads the page BoursoBank
+  serves and logs `IBAN_UNAVAILABLE` when an IBAN cannot be read. A BoursoBank account seen for the
+  first time through both the sidecar and Enable Banking now lands on one row when the sidecar
+  reads its IBAN. When that read fails (`IBAN_UNAVAILABLE` in the sidecar log), the two connections
+  keep separate rows, as do two copies created before this fix: delete one of them, and neither
+  connection brings it back. If Enable Banking changes an account's ID, its connection can still
+  match the surviving row by IBAN.
+
+## [1.3.1] — 2026-11-26
+
+### Added
+
+- **Tracked fund by ISIN in analysis pages (API).** Accounts that hold a single fund without
+  individual holding lines (such as a Wise "Stocks" jar synced as a savings account) can now
+  declare a `trackedIsin` via the accounts API so the wealth pyramid, projection, and portfolio
+  diversification classify and spread the account's balance under that fund instead of cash
+  (#685, #760; account form UI follows in a separate pull request).
+- **Daily NAV by ISIN for unlisted funds.** Unlisted funds (OPCVM) that carry an ISIN can now be
+  priced in EUR from Boursorama's end-of-day NAV when justETF and Yahoo have no quote (#704).
+- **CSV import of bank and card statements on every account type** ([#671](https://github.com/Cloeille/picsou-finance/issues/671)).
+  The CSV import wizard now opens on a checking account, a card and every other non-investment
+  account, manual or synced, except loans. It maps the date, the label and either one signed amount
+  or separate debit and credit columns, with an option to flip the sign for card exports that list
+  purchases as positive. Lines the account already holds (same date, amount and label) are left out
+  and counted, so overlapping monthly statements import once. A manual cash ledger has its balance
+  re-anchored on its latest statement; a synced account keeps its provider balance. Investment
+  accounts keep the trade import, still on manual accounts only — see
+  `docs/features/csv-transaction-import.md`.
+- **Direct desktop downloads.** Each release now also publishes the desktop installers under
+  version-less names (`Picsou-macOS-arm64.dmg`, `Picsou-Windows-x64.exe`,
+  `Picsou-Linux-x64.AppImage`). The README opens with a desktop app section and one download
+  button per platform that always serves the latest version.
+- **Edit a categorization rule.** Each rule in Budget → Manage has an edit button, and the Automate
+  menu of the "To categorize" tab has a "Manage rules" entry that opens the rules (#692).
+- **More AI providers.** AI categorization can use Mistral, Google Gemini or any OpenAI-compatible
+  server (key optional, and the base URL may end with `/v1`), next to Anthropic, OpenAI, OpenRouter
+  and Ollama. The settings form fills the base URL of the chosen provider and suggests the models
+  that the provider offers. The stored API key is now sent only to the provider and host it was
+  saved for, and a change of provider without a new key clears it.
+- **Gulf currencies for accounts.** AED, SAR, QAR, KWD, BHD and OMR can now be picked when
+  creating or editing an account. Values convert to EUR like the other currencies (#718).
+- **One-click broken bank connector reporting.** Failed sync states for bank sidecar connectors
+  and Enable Banking now offer a "Report this problem" action that previews the exact text
+  (connector ID, typed error code, app version, and runtime only — no amounts, account names,
+  IBANs, usernames, or raw bank error messages) before opening a prefilled GitHub issue in a new
+  tab, with nothing sent by Picsou itself.
 - **OKX exchange sync.** Connect a read-only API key to track trading and funding
   balances, Simple Earn Flexible, On-chain Earn, and ETH and SOL staking. Choose
   Global, EEA, or US when adding the connection. (#622)
@@ -21,8 +118,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `manifest.webmanifest` wired into `index.html`, so saving Picsou to an iOS or Android home
   screen shows the Picsou icon and title instead of a generic placeholder. (#438)
 
+### Changed
+
+- **Shares and ETFs are valued by their ISIN.** A line that carries an ISIN takes its price from
+  justETF, then Yahoo on the ISIN's own market, then Boursorama for unlisted funds, before falling
+  back to its ticker if none has a quote. A PEA line matched to a US grey-market ticker now gets
+  the ISIN's own price instead of the wrong listing, while holdings without an ISIN quote keep
+  their existing ticker fallback (still guarded against contradictory quotes on synced bank
+  accounts) (#701).
+- **Goal cards.** A goal card on the Goals page shows the amount and the progress only. Months
+  left, the amount needed per month and the average contribution are in the detail dialog of the
+  goal. The dashboard no longer shows a sentence under its goals card.
+- **AI setup from the desktop app.** When no AI provider is set up and advanced mode is off, the
+  Automate menu of the "To categorize" tab offers to turn advanced mode on and opens the AI
+  settings.
+- **Faster AI categorization by default.** A new Anthropic, OpenAI or OpenRouter provider starts
+  with 8 parallel requests instead of 4. The setting stays, with a hint that says when to lower
+  it: each transaction is one request, and a provider that answers with rate-limit errors needs
+  fewer of them at once.
+
 ### Fixed
 
+- **Natixis Interépargne login failures now log the bank's error codes** (#689).
+- **Co-owned loan detail sheet.** The loan summary and amortization schedule
+  (`GET /api/accounts/{id}/loan-summary`) now weigh monetary amounts by the viewer's ownership
+  share and let co-owners open the sheet instead of answering 404, matching the dashboard
+  liabilities card (#548).
+- **Natixis Interépargne (desktop app): logins asked to register a passkey now complete.** The
+  in-process Rust connector used by the desktop app (and when `APP_NATIVE_SIDECARS=true`) now puts
+  off Natixis's passkey registration prompt ("later") and retries the profile check instead of
+  failing with an upstream format error (#686, #688).
+- **Manual PER and life insurance accounts.** A manual PER or life insurance account now offers the
+  buy and sell form, so a fund position can be entered without a detour through a securities
+  account.
+- **Merchant logos on the account page.** The transactions of an account show merchant logos, as
+  the budget pages do (#697).
+- **Card labels with a glued Lemonway prefix.** A label such as `CARTE 07/11/26 LMWSNCF CONNECT`
+  is now read as `Sncf Connect`, so the merchant is recognised (#691).
+- **American Express: log in when AMEX asks for an approval in the AMEX app.** Some accounts confirm
+  the login with a push notification instead of a code by SMS or e-mail. The verify page then has no
+  channel to pick and the sync failed with "The Amex website format changed". The connector now waits
+  for the approval on the phone and completes the login on its own. An approval not given in time
+  ends with "The Amex authentication attempt expired". The verify page diagnostic now logs which known
+  keywords the page's headings and buttons contain, never their text.
+- **BoursoBank: managed PEA holdings under `funds`.** A managed PEA whose trading summary returns an
+  empty `positions` list and lists its holdings under `funds` is now imported and reconciled against
+  the account valuation instead of failing with `PORTFOLIO_INCOMPLETE` (#398).
+- **A bank-valued line is no longer priced from another listing's quote.** On synced BoursoBank,
+  Bourse Direct, Fortuneo and the other accounts whose bank values each position, a market quote
+  more than twice or less than half the bank's own value for that line is ignored, and the line
+  keeps the bank's figure. An ETF resolved to a US grey-market ticker (`MULYF`, 376 EUR for a
+  4.41 EUR share) had inflated a PEA by about 30 000 EUR. The holding detail, the Excel export,
+  the 24H chart and the range P&L follow the same rule. Snapshots already recorded with the wrong
+  value are not rewritten. (#683)
+- **BNP Paribas mandatory password change.** When BNP Paribas serves its password-renewal form
+  (`form#mcsForm`) on an opaque PingFederate URL after the keypad or second-factor step, the
+  connector now detects it from the page DOM and asks the member to update their password on the
+  bank's website (`ACTION_REQUIRED`) instead of reporting an unsupported second factor (#727).
+- **La Banque Postale sign-in works again.** The bank moved its login to a new page that shows the
+  "Pour plus de sécurité" step without changing the address, so the connector never pressed
+  *Continuer*: no notification reached the phone, and the connection failed after the keypad as
+  "temporarily unavailable". The connector now continues that step and waits for the approval on
+  the phone, and a refused password is reported as such. A login that asks for an SMS code or
+  Certicode Plus still fails, with the screen named in the sidecar log.
+- **Natixis Interépargne: logins asked to register a passkey now complete.** After the password
+  and the code, Natixis can ask for a passkey to be registered. Picsou now puts it off, as the
+  "later" button of the saver space does, instead of reporting a website format change. (#686, #688)
 - **Reject oversized crypto exchange quantities.** Sync reports an invalid exchange response
   when a position or asset total exceeds the supported range and keeps the previous balance. (#755)
 - **Enable Banking: the scope note no longer sends savings accounts elsewhere.** The Banks tab and

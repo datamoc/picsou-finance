@@ -133,7 +133,6 @@
     "noGoals": "Keine Ziele definiert",
     "newGoal": "Neues Ziel",
     "achieved": "erreicht",
-    "goalsSummary": "Verfolge deinen Fortschritt auf dem Weg zu deinen finanziellen Zielen.",
     "otherGoals": "{{count}} weiteres Ziel",
     "otherGoals_other": "{{count}} weitere Ziele",
     "holdings": "Bestände",
@@ -242,6 +241,8 @@
     "accountType": "Kontotyp",
     "provider": "Anbieter",
     "bankPickerHint": "Wählen Sie Ihre Bank aus der Liste, um ihr Logo anzuzeigen.",
+    "insurerPlaceholder": "CNP Assurances, Suravenir…",
+    "insurerBadge": "Versicherer",
     "ticker": "Ticker",
     "openedAt": "Eröffnungsdatum",
     "openedAtHint": "Die Besteuerung eines PEA hängt von seinem Alter ab: Die fünf Jahre laufen ab diesem Datum, nicht ab der Erfassung in Picsou.",
@@ -968,7 +969,7 @@
       "degiro": "DEGIRO-Wertpapierkonto synchronisieren",
       "ibkr": "Synchronisieren Sie Ihr Interactive-Brokers-Konto per Flex Query",
       "simplefin": "Bankkonten mit einem SimpleFIN-Setup-Token importieren",
-      "wise": "Ihre Wise Jars, die die Bankverbindung nicht sieht",
+      "wise": "Ihre Wise Jars, falls sie nicht bereits über Enable Banking synchronisiert werden (nicht beide verbinden)",
       "finary": "Aus Finary importieren",
       "manual": "Konto manuell erstellen",
       "amundi": "PEE, PEG, PERCO, PER bei Amundi",
@@ -995,6 +996,15 @@
   },
   "sync": {
     "title": "Synchronisierung",
+    "reportProblem": {
+      "action": "Dieses Problem melden",
+      "dialogTitle": "Defekten Bankkonnektor melden",
+      "dialogDescription": "Prüfen Sie den genauen Text, der in einem neuen GitHub-Issue vorausgefüllt wird. Picsou sendet selbst nichts.",
+      "titleLabel": "Titel",
+      "bodyLabel": "Inhalt",
+      "privacyNote": "Es werden keine Beträge, Kontonamen, IBANs, Benutzernamen oder rohen Fehlermeldungen Ihrer Bank einbezogen.",
+      "openGithub": "Auf GitHub öffnen"
+    },
     "connectionStatus": {
       "CREATED": "Ausstehend",
       "LINKED": "Verbunden",
@@ -1027,9 +1037,9 @@
       "callbackError": "Synchronisierungsfehler",
       "initiateError": "Verbindung fehlgeschlagen",
       "psd2ScopeNote": "Enable Banking synchronisiert Girokonten und, wenn deine Bank sie freigibt, Sparkonten. Für PEA und Lebensversicherung: nutze Trade Republic, Boursobank, Finary oder füge sie manuell hinzu.",
-      "wiseJarsMissing": "Ihre Wise Jars kommen nicht über diese Verbindung.",
+      "wiseJarsMissing": "Wise Jars kommen nur über Enable Banking, wenn sie im Enable Banking Control Panel ausgewählt sind. Nutzen Sie den Connector Wise Jars nur, wenn sie hier fehlen, nicht beides, sonst werden sie doppelt gezählt.",
       "wiseJarsConnect": "Jars verbinden",
-      "wiseJarsConnected": "Ihre Wise Jars werden über den Connector Wise Jars synchronisiert.",
+      "wiseJarsConnected": "Ihre Wise Jars werden über den Connector Wise Jars synchronisiert. Wählen Sie sie im Enable Banking Control Panel nicht zusätzlich aus, sonst werden sie doppelt gezählt.",
       "wiseJarsFailed": "Die letzte Synchronisierung Ihrer Wise Jars ist fehlgeschlagen.",
       "wiseJarsOpen": "Wise Jars öffnen",
       "proBadge": "Pro",
@@ -1123,7 +1133,7 @@
     },
     "wise": {
       "title": "Wise Jars",
-      "intro": "Dieser Connector ist nur für Ihre Wise Jars: Die Wise-Bankverbindung im Tab Banken sieht sie nicht. Ihr Wise-Girokonto und seine Umsätze bleiben im Tab Banken.",
+      "intro": "Dieser Connector ist nur für Ihre Wise Jars. Nutzen Sie ihn nur, wenn Enable Banking sie nicht bereits synchronisiert (über das Enable Banking Control Panel), sonst werden sie doppelt gezählt. Ihr Wise-Girokonto und seine Umsätze bleiben im Tab Banken.",
       "setupHint": "Erstellen Sie auf wise.com ein persönliches API-Token mit Lesezugriff und fügen Sie es hier ein.",
       "createToken": "Token erstellen",
       "token": "Wise-API-Token",
@@ -2516,9 +2526,13 @@
       "description": "Optional AI provider used to categorize transactions the deterministic rules leave uncategorized.",
       "provider": "Provider",
       "providerNone": "Disabled",
-      "providerOpenAi": "OpenAI / compatible",
+      "providerCustom": "Andere (OpenAI-kompatibel)",
       "model": "Model",
+      "modelRequired": "Für diesen Anbieter ist ein Modell erforderlich.",
+      "modelsLoading": "Modelle werden geladen…",
+      "modelsLoadFailed": "Die Modellliste konnte nicht abgerufen werden. Gib die Modell-ID ein.",
       "baseUrl": "Base URL",
+      "baseUrlRequired": "Für einen benutzerdefinierten Anbieter ist eine Basis-URL erforderlich.",
       "apiKey": "API key",
       "apiKeyHintPresent": "A key is already saved — leave blank to keep it.",
       "apiKeyRequired": "An API key is required when changing provider.",
@@ -2529,7 +2543,8 @@
       "saving": "Saving…",
       "saved": "Saved",
       "maxConcurrency": "Parallel requests",
-      "maxConcurrencyHint": "How many AI calls to run at once (1–16). Lower for local Ollama.",
+      "maxConcurrencyHint": "Anzahl gleichzeitig gesendeter Anfragen. Höhere Werte beschleunigen die Kategorisierung. Verringere den Wert, wenn der Anbieter Rate-Limit-Fehler zurückgibt, oder für ein lokales Modell.",
+      "maxConcurrencyRange": "Gib eine ganze Zahl zwischen 1 und 16 ein.",
       "addProvider": "Anbieter hinzufügen",
       "configureProvider": "Anbieter konfigurieren",
       "editProvider": "Anbieter bearbeiten",
@@ -2829,6 +2844,7 @@
         "copied": "Kopiert!",
         "addedCta": "Anwendung registriert und aktiviert, weiter",
         "uriLabel": "Weiterleitungs-URL",
+        "desktopNote": "Diese feste HTTPS-URL muss weder existieren noch erreichbar sein: Picsou Desktop fängt die Weiterleitung der Bank direkt im Anmeldefenster ab.",
         "checklistTitle": "Checkliste für die Anwendung",
         "environment": "Umgebung: Production. Sandbox bietet nur fiktive Testbanken.",
         "name": "Name: Picsou oder ein Name, den du wiedererkennst.",
@@ -2965,6 +2981,9 @@
     "import": "Importieren",
     "rowsImported": "{{count}} Transaktionen importiert",
     "rowsSkipped": "{{count}} Zeilen übersprungen",
+    "rowsDuplicate": "{{count}} Zeilen bereits im Konto, ausgelassen",
+    "invertSign": "Ausgaben sind in dieser Datei positiv (jeden Betrag umkehren)",
+    "cashHint": "Ordnen Sie entweder eine vorzeichenbehaftete Betragsspalte oder die Soll- und Habenspalten zu.",
     "rowLabel": "Zeile {{row}}",
     "field": {
       "date": "Datum",
@@ -2975,7 +2994,10 @@
       "unitPrice": "Stückpreis",
       "fees": "Gebühren",
       "currency": "Währung",
-      "amount": "Betrag"
+      "amount": "Betrag",
+      "description": "Buchungstext",
+      "debit": "Soll",
+      "credit": "Haben"
     }
   },
   "realized": {
@@ -3516,8 +3538,11 @@
       "aiDone": "AI done: {{applied}} applied, {{suggested}} suggested",
       "createRule": "Create rule",
       "editRule": "Edit rule",
+      "manageRules": "Regeln verwalten",
       "configureAi": "KI konfigurieren",
       "aiSettings": "KI-Einstellungen",
+      "enableAdvancedMode": "Erweiterten Modus aktivieren",
+      "enableAdvancedModeHint": "Erforderlich, um die KI-Kategorisierung einzurichten",
       "searchPlaceholder": "Transaktionen suchen...",
       "incoming": "Eingang",
       "outgoing": "Ausgang",
@@ -3547,6 +3572,7 @@
       "title": "Categorization rules",
       "hint": "Automatically categorize matching transactions.",
       "add": "New rule",
+      "edit": "Regel bearbeiten",
       "empty": "No rules defined.",
       "error": "Couldn't load rules.",
       "learned": "Auto",
@@ -3780,6 +3806,13 @@
     "autologinFailed": {
       "title": "Anmeldung nicht möglich",
       "description": "Picsou konnte deine Sitzung nicht automatisch öffnen. Beende Picsou über sein Symbol im Infobereich und starte es erneut."
+    },
+    "update": {
+      "bannerTitle": "Picsou {{version}} ist verfügbar",
+      "install": "Installieren",
+      "installing": "Wird installiert...",
+      "checking": "Suche läuft...",
+      "checkFailed": "Updates konnten nicht geprüft werden."
     }
   }
 }

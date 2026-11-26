@@ -134,7 +134,6 @@
     "noGoals": "Aucun objectif défini",
     "newGoal": "Nouvel objectif",
     "achieved": "atteint",
-    "goalsSummary": "Suivez votre progression vers vos objectifs financiers.",
     "otherGoals": "{{count}} autre objectif",
     "otherGoals_other": "{{count}} autres objectifs",
     "holdings": "Patrimoine",
@@ -253,6 +252,8 @@
     "accountType": "Type de compte",
     "provider": "Établissement",
     "bankPickerHint": "Choisissez votre banque dans la liste pour afficher son logo.",
+    "insurerPlaceholder": "CNP Assurances, Suravenir…",
+    "insurerBadge": "Assureur",
     "ticker": "Ticker",
     "openedAt": "Date d'ouverture",
     "openedAtHint": "La fiscalité d'un PEA dépend de son ancienneté : les cinq ans se comptent depuis cette date, pas depuis l'ajout dans Picsou.",
@@ -1172,8 +1173,11 @@
       "aiDone": "Analyse par intelligence artificielle terminée : {{applied}} appliquées et {{suggested}} suggérées.",
       "createRule": "Créer une règle",
       "editRule": "Modifier la règle",
+      "manageRules": "Gérer les règles",
       "configureAi": "Configurer l'intelligence artificielle",
       "aiSettings": "Paramétrer l'intelligence artificielle",
+      "enableAdvancedMode": "Activer le mode avancé",
+      "enableAdvancedModeHint": "Nécessaire pour configurer la catégorisation par intelligence artificielle",
       "searchPlaceholder": "Rechercher une opération...",
       "incoming": "Entrée",
       "outgoing": "Sortie",
@@ -1203,6 +1207,7 @@
       "title": "Règles de catégorisation",
       "hint": "Catégorisez automatiquement les transactions correspondantes.",
       "add": "Nouvelle règle",
+      "edit": "Modifier la règle",
       "empty": "Aucune règle définie.",
       "error": "Impossible de charger les règles.",
       "learned": "Auto",
@@ -1271,7 +1276,7 @@
       "degiro": "Synchronisez votre compte-titres et vos positions DEGIRO.",
       "ibkr": "Synchronisez votre compte Interactive Brokers via Flex Query.",
       "simplefin": "Importez vos comptes bancaires à l'aide d'un jeton SimpleFIN.",
-      "wise": "Suivez vos réserves Wise, non couvertes par la connexion bancaire classique.",
+      "wise": "Suivez vos Jars Wise si Enable Banking ne les synchronise pas déjà (ne connectez pas les deux).",
       "finary": "Importez votre patrimoine et vos actifs depuis votre compte Finary.",
       "manual": "Créez et suivez un compte manuellement.",
       "amundi": "Synchronisez vos plans d'épargne salariale (PEE, PEG, PERCO et PER) chez Amundi.",
@@ -1297,6 +1302,15 @@
   },
   "sync": {
     "title": "Synchronisation",
+    "reportProblem": {
+      "action": "Signaler ce problème",
+      "dialogTitle": "Signaler un connecteur bancaire en panne",
+      "dialogDescription": "Vérifiez le texte exact qui sera prérempli dans un nouveau ticket GitHub. Picsou n'envoie rien par lui-même.",
+      "titleLabel": "Titre",
+      "bodyLabel": "Contenu",
+      "privacyNote": "Aucun montant, nom de compte, IBAN, identifiant ni message brut de la banque n'est inclus.",
+      "openGithub": "Ouvrir sur GitHub"
+    },
     "connectionStatus": {
       "CREATED": "En attente",
       "LINKED": "Connecté",
@@ -1329,9 +1343,9 @@
       "callbackError": "Erreur de synchronisation",
       "initiateError": "Échec de la connexion",
       "psd2ScopeNote": "Enable Banking synchronise vos comptes courants, et vos livrets quand votre banque les partage. Pour vos PEA et assurances-vie, utilisez les intégrations dédiées ou ajoutez-les manuellement.",
-      "wiseJarsMissing": "Vos Jars Wise ne passent pas par cette connexion.",
+      "wiseJarsMissing": "Les Jars Wise ne passent par Enable Banking que s'ils sont sélectionnés dans le Control Panel Enable Banking. N'utilisez le connecteur Wise Jars que s'ils manquent ici, jamais les deux, sinon ils seront comptés en double.",
       "wiseJarsConnect": "Connecter les Jars",
-      "wiseJarsConnected": "Vos Jars Wise sont synchronisés par le connecteur Wise Jars.",
+      "wiseJarsConnected": "Vos Jars Wise sont synchronisés par le connecteur Wise Jars. Ne les sélectionnez pas dans le Control Panel Enable Banking, sinon ils seront comptés en double.",
       "wiseJarsFailed": "La dernière synchronisation de vos Jars Wise a échoué.",
       "wiseJarsOpen": "Ouvrir Wise Jars",
       "proBadge": "Pro",
@@ -1468,7 +1482,7 @@
     },
     "wise": {
       "title": "Wise Jars",
-      "intro": "Ce connecteur sert uniquement à vos Jars Wise : la connexion bancaire Wise de l'onglet Banques ne les voit pas. Votre compte courant Wise et ses transactions restent sur l'onglet Banques.",
+      "intro": "Ce connecteur sert uniquement à vos Jars Wise. Utilisez-le seulement si Enable Banking ne les synchronise pas déjà (via le Control Panel Enable Banking), sinon ils seront comptés en double. Votre compte courant Wise et ses transactions restent sur l'onglet Banques.",
       "setupHint": "Sur le site wise.com, créez un jeton API personnel en lecture seule, puis collez-le ici.",
       "createToken": "Créer un jeton",
       "token": "Jeton API Wise",
@@ -2752,9 +2766,13 @@
       "description": "Fournisseur d'intelligence artificielle optionnel utilisé pour catégoriser les transactions que les règles déterministes laissent non catégorisées.",
       "provider": "Fournisseur",
       "providerNone": "Désactivé",
-      "providerOpenAi": "OpenAI / compatible",
+      "providerCustom": "Autre (compatible OpenAI)",
       "model": "Modèle",
+      "modelRequired": "Le modèle est requis pour ce fournisseur.",
+      "modelsLoading": "Chargement des modèles…",
+      "modelsLoadFailed": "Impossible de récupérer la liste des modèles. Saisissez l'identifiant du modèle.",
       "baseUrl": "URL de base",
+      "baseUrlRequired": "L'URL de base est requise pour un fournisseur personnalisé.",
       "apiKey": "Clé API",
       "apiKeyHintPresent": "Une clé est déjà enregistrée. Laissez le champ vide pour la conserver.",
       "apiKeyRequired": "Une clé API est requise lors du changement de fournisseur.",
@@ -2765,7 +2783,8 @@
       "saving": "Enregistrement…",
       "saved": "Enregistré",
       "maxConcurrency": "Requêtes en parallèle",
-      "maxConcurrencyHint": "Nombre d'appels simultanés entre 1 et 16 (réduisez cette valeur pour un modèle local).",
+      "maxConcurrencyHint": "Nombre de requêtes envoyées en même temps. Plus élevé, la catégorisation va plus vite. Réduisez-le si le fournisseur répond par des erreurs de limite de débit, ou pour un modèle local.",
+      "maxConcurrencyRange": "Saisissez un nombre entier entre 1 et 16.",
       "addProvider": "Ajouter un fournisseur",
       "configureProvider": "Configurer un fournisseur",
       "editProvider": "Modifier le fournisseur",
@@ -3155,6 +3174,7 @@
         "copied": "Copié !",
         "addedCta": "Application enregistrée et activée, continuer",
         "uriLabel": "URL de redirection",
+        "desktopNote": "Cette URL HTTPS fixe n’a pas besoin d’exister ni d’être joignable : Picsou Desktop intercepte la redirection de la banque directement dans sa fenêtre de connexion.",
         "checklistTitle": "Champs de l'application",
         "environment": "Environnement : Production. Sandbox ne propose que des banques de test fictives.",
         "name": "Nom : Picsou, ou un nom que vous reconnaissez.",
@@ -3325,6 +3345,9 @@
     "import": "Importer",
     "rowsImported": "{{count}} transactions importées",
     "rowsSkipped": "{{count}} lignes ignorées",
+    "rowsDuplicate": "{{count}} lignes déjà présentes sur le compte, écartées",
+    "invertSign": "Les sorties sont positives dans ce fichier (inverser chaque montant)",
+    "cashHint": "Associez soit une colonne de montant signé, soit les colonnes débit et crédit.",
     "rowLabel": "Ligne {{row}}",
     "field": {
       "date": "Date",
@@ -3335,7 +3358,10 @@
       "unitPrice": "Prix unitaire",
       "fees": "Frais",
       "currency": "Devise",
-      "amount": "Montant"
+      "amount": "Montant",
+      "description": "Libellé",
+      "debit": "Débit",
+      "credit": "Crédit"
     }
   },
   "realized": {
@@ -3780,6 +3806,13 @@
     "autologinFailed": {
       "title": "Ouverture de session impossible",
       "description": "Picsou n'a pas pu ouvrir votre session automatiquement. Quittez Picsou depuis son icône (barre des menus ou zone de notification), puis relancez-le."
+    },
+    "update": {
+      "bannerTitle": "Picsou {{version}} est disponible",
+      "install": "Installer",
+      "installing": "Installation...",
+      "checking": "Vérification...",
+      "checkFailed": "Impossible de vérifier les mises à jour."
     }
   }
 }

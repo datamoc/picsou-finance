@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -93,6 +93,7 @@ describe('BnpTab', () => {
     renderTab()
     await signIn('123456')
     expect(screen.getByText('sync.bnp.errors.invalidIdentifier')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'sync.reportProblem.action' })).not.toBeInTheDocument()
     expect(apiPost).not.toHaveBeenCalled()
   })
 
