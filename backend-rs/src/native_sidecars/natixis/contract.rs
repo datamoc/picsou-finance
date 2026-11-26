@@ -56,6 +56,11 @@ pub(crate) struct InitiateRequest {
 }
 
 #[derive(Debug, Clone)]
+pub(crate) struct PasskeyRequest {
+    pub email: String,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct CompleteRequest {
     pub process_id: String,
     pub code: String,
@@ -174,6 +179,17 @@ impl InitiateRequest {
             return Err(NativeError::new(StatusCode::BAD_REQUEST, "INVALID_DATA"));
         };
         Ok(Self { email, password })
+    }
+}
+
+impl PasskeyRequest {
+    pub fn parse(body: Option<Value>) -> Result<Self, NativeError> {
+        let map = require_object(body)?;
+        let email = extract_bounded_str(&map, "email", 1, 254);
+        match email {
+            Some(email) if check_no_extra_fields(&map, &["email"]) => Ok(Self { email }),
+            _ => Err(NativeError::new(StatusCode::BAD_REQUEST, "INVALID_DATA")),
+        }
     }
 }
 

@@ -3,6 +3,7 @@
 
 mod external;
 mod i18n;
+mod passkey;
 mod sidecars;
 mod supervisor;
 mod update;

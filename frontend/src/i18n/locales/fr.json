@@ -2018,7 +2018,15 @@
       "noSession": "Aucune session active",
       "sessionActive": "Session active",
       "scope": "Synchronise vos plans d'épargne salariale Natixis Interépargne (PEE, PERCO, PER…) et les fonds qu'ils contiennent : parts, valeur de la part et plus-value. Après cette première connexion, les synchronisations se font seules jusqu'à ce que Natixis mette fin à la session ; il faudra alors vous reconnecter.",
+      "passkey": {
+        "connect": "Se connecter avec une clé d'accès",
+        "hint": "Avec une clé d'accès, l'e-mail suffit : Windows demande ensuite votre empreinte, votre code PIN ou votre clé de sécurité.",
+        "waiting": "Confirmez dans la fenêtre Windows."
+      },
       "errors": {
+        "passkeyNotOffered": "Ce compte ne propose pas la connexion par clé d'accès. Connectez-vous avec votre mot de passe.",
+        "passkeyNotConfirmed": "La demande de clé d'accès a été fermée ou a expiré. Fermez toute fenêtre Windows encore ouverte, puis réessayez.",
+        "passkeyRefused": "Natixis Interépargne a refusé l'e-mail ou la clé d'accès.",
         "tooManyAttempts": "Natixis Interépargne a bloqué les nouvelles tentatives. Réessayez plus tard.",
         "invalidCredentials": "Natixis Interépargne a refusé l'e-mail ou le mot de passe.",
         "mfaTypeUnsupported": "Ce compte ne propose que la connexion par clé d'accès ou un second facteur que Picsou ne sait pas gérer. Picsou a besoin de la connexion par mot de passe et des codes par SMS, e-mail ou appel vocal : activez ces options dans les paramètres de sécurité de Natixis Interépargne.",

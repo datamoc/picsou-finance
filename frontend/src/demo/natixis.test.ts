@@ -48,6 +48,8 @@ describe('Natixis demo connector', () => {
     await call('GET', '/natixis/status')
     await call('POST', '/natixis/auth/initiate')
     await call('POST', '/natixis/auth/complete')
+    await call('GET', '/natixis/auth/passkey')
+    await call('POST', '/natixis/auth/passkey')
     await call('POST', '/natixis/sync')
     await call('DELETE', '/natixis/session')
     expect(warn).not.toHaveBeenCalled()

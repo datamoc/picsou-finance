@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Natixis Interépargne: sign in with a passkey (Picsou Desktop for Windows).** Type your e-mail,
+  then confirm with Windows Hello or your security key: no password and no code. Picsou uses a
+  passkey you already have, never creates one, and keeps the same session as a password login.
+  Docker and Helm installs keep the password login. (#688)
 - **OKX exchange sync.** Connect a read-only API key to track trading and funding
   balances, Simple Earn Flexible, On-chain Earn, and ETH and SOL staking. Choose
   Global, EEA, or US when adding the connection. (#622)

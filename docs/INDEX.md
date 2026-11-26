@@ -101,6 +101,7 @@
 | 2026-11-21 | [Rewrite the backend in Rust](./decisions/2026-11-21-rust-backend.md) | Proposed |
 | 2026-11-22 | [Dual-engine database architecture (Embedded SQLite + PostgreSQL)](./decisions/2026-11-22-sqlite-dual-engine.md) | Proposed |
 | 2026-11-25 | [How Picsou names a fund the provider does not identify](./decisions/2026-11-25-tracked-fund-isin.md) | Active |
+| 2026-11-25 | [Natixis passkey sign-in through the desktop shell's Windows prompt](./decisions/2026-11-25-natixis-passkey-on-desktop.md) | Proposed |
 
 ## Feature notes
 

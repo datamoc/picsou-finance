@@ -170,7 +170,14 @@ impl NativeSidecars {
                 config.native_sidecar_url("cic"),
             )),
         );
-        registry.register("natixis-auth", Arc::new(natixis::NativeNatixis::new()));
+        let mut natixis =
+            natixis::NatixisConfig::for_local_stub(config.native_sidecar_url("natixis"))
+                .unwrap_or_default();
+        natixis.passkey_bridge = natixis::PasskeyBridge::from_config(config);
+        registry.register(
+            "natixis-auth",
+            Arc::new(natixis::NativeNatixis::with_config(natixis)),
+        );
         registry.register("bourso-auth", Arc::new(bourso::NativeBourso::new()));
         registry
     }

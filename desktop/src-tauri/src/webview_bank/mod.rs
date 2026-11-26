@@ -1,8 +1,9 @@
 //! Reusable native Tauri WebView bank connector bridge (`127.0.0.1` loopback HTTP).
 //!
 //! Hosts interactive WebView bank connectors inside `picsou-desktop` for BNP Paribas / Hello bank!,
-//! American Express, and Revolut. Every route except health checks requires the shared
-//! `X-Picsou-Sidecar-Key` (`APP_SIDECAR_API_KEY`) verified in constant time.
+//! American Express, and Revolut, and the passkey prompt of bank logins (`crate::passkey`). Every
+//! route except health checks requires the shared `X-Picsou-Sidecar-Key` (`APP_SIDECAR_API_KEY`)
+//! verified in constant time.
 
 pub mod amex;
 pub mod amex_parsers;
@@ -27,6 +28,7 @@ use subtle::ConstantTimeEq;
 use tauri::{AppHandle, Url, WebviewWindow};
 use tokio::sync::oneshot;
 
+use crate::passkey;
 use crate::supervisor::LOOPBACK;
 use amex::AmexWebviewManager;
 use bnp::{ApiError, BnpWebviewManager};
@@ -44,6 +46,8 @@ struct BridgeState {
     bnp: Arc<BnpWebviewManager>,
     amex: Arc<AmexWebviewManager>,
     revolut: Arc<RevolutWebviewManager>,
+    passkey: passkey::Gate,
+    authenticator: Arc<dyn passkey::Authenticator>,
 }
 
 /// Running loopback WebView bridge; dropping or calling `stop` shuts down the HTTP server and
@@ -68,6 +72,10 @@ impl WebviewBridge {
 
     pub fn revolut_url(&self) -> String {
         format!("{}/revolut", self.url)
+    }
+
+    pub fn passkey_url(&self) -> String {
+        format!("{}/passkey", self.url)
     }
 
     pub fn stop(&mut self) {
@@ -95,6 +103,8 @@ pub fn start(app: AppHandle, api_key: String) -> io::Result<WebviewBridge> {
         bnp: Arc::clone(&bnp),
         amex: Arc::clone(&amex),
         revolut: Arc::clone(&revolut),
+        passkey: passkey::Gate::default(),
+        authenticator: passkey::system(app.clone()),
     });
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -174,6 +184,8 @@ fn build_router(state: Arc<BridgeState>) -> axum::Router {
             "/revolut/session/{member_id}",
             delete(revolut_delete_session),
         )
+        // Passkey assertion for a bank login
+        .route("/passkey/assertion", post(passkey_assertion))
         .with_state(state)
 }
 
@@ -482,6 +494,21 @@ fn revolut_error_response(err: ApiError) -> Response {
 
 async fn health() -> impl IntoResponse {
     Json(json!({ "status": "ok", "webview": true }))
+}
+
+async fn passkey_assertion(
+    State(state): State<Arc<BridgeState>>,
+    headers: HeaderMap,
+    Json(body): Json<passkey::AssertionRequest>,
+) -> Response {
+    if !sidecar_key_valid(&headers, &state.api_key) {
+        return unauthorized_response();
+    }
+    let authenticator = Arc::clone(&state.authenticator);
+    match state.passkey.assert(authenticator, body).await {
+        Ok(reply) => (StatusCode::OK, Json(reply)).into_response(),
+        Err(refusal) => error_response(ApiError::new(refusal.status, refusal.detail)),
+    }
 }
 
 // ─── BNP routes ──────────────────────────────────────────────────────────────

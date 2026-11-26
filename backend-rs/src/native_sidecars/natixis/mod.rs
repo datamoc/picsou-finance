@@ -5,10 +5,12 @@
 //! - `POST /initiate`  (`{email, password}` -> `{processId, mfaRequired: true, mfaType}`)
 //! - `POST /complete`  (`{processId, code}` -> `{sessionState}`)
 //! - `POST /cancel`    (`{processId}` -> 204)
+//! - `POST /passkey`   (`{email}` -> `{sessionState}`, where the desktop shell can prompt)
 //! - `POST /positions` (`{sessionState}` -> `{sessionState, plans, operationsComplete, operationsFrom, operations}`)
 
 pub mod contract;
 pub mod operations_parser;
+mod passkey;
 mod pending;
 pub mod savings_parser;
 
@@ -42,6 +44,7 @@ use self::operations_parser::{
     DEFAULT_API_ORIGIN, FinishedDemand, finished_demands_with_origin, operation_fund_ids,
     parse_operations, quote_path_segment,
 };
+pub use self::passkey::PasskeyBridge;
 use self::pending::{LoginState, PendingEntry, PendingStore};
 use self::savings_parser::{SavingsFormatError, fund_code, fund_ids, parse_plans};
 use crate::clock::{Clock, SystemClock};
@@ -188,6 +191,8 @@ pub struct NatixisConfig {
     pub operations_budget: Duration,
     pub fund_detail_budget: Duration,
     pub clock: Arc<dyn Clock>,
+    /// Where a passkey prompt can be asked for; None everywhere but Picsou Desktop on Windows.
+    pub passkey_bridge: Option<PasskeyBridge>,
 }
 
 impl Default for NatixisConfig {
@@ -208,6 +213,7 @@ impl Default for NatixisConfig {
             operations_budget: Duration::from_secs(OPERATIONS_BUDGET_SECONDS),
             fund_detail_budget: Duration::from_secs(FUND_DETAIL_BUDGET_SECONDS),
             clock: Arc::new(SystemClock),
+            passkey_bridge: None,
         }
     }
 }
@@ -281,6 +287,11 @@ impl NatixisConfig {
         S: Into<String>,
     {
         self.trusted_hosts = hosts.into_iter().map(Into::into).collect();
+        self
+    }
+
+    pub fn with_passkey_bridge(mut self, bridge: PasskeyBridge) -> Self {
+        self.passkey_bridge = Some(bridge);
         self
     }
 
@@ -417,6 +428,13 @@ impl NativeNatixis {
                 }
                 self.handle_cancel(body).await
             }
+            "/passkey" => {
+                if method != Method::POST {
+                    let (status, detail) = method_not_allowed(&method);
+                    return Err(NativeError::new(status, detail));
+                }
+                self.handle_passkey(body).await
+            }
             "/positions" => {
                 if method != Method::POST {
                     let (status, detail) = method_not_allowed(&method);
@@ -432,8 +450,13 @@ impl NativeNatixis {
     }
 
     fn new_http_client(&self) -> Result<reqwest::Client, NatixisError> {
+        self.http_client_as(USER_AGENT)
+    }
+
+    /// A cookie-keeping client that presents itself as the browser named by `user_agent`.
+    fn http_client_as(&self, user_agent: &'static str) -> Result<reqwest::Client, NatixisError> {
         let mut headers = HeaderMap::new();
-        headers.insert(USER_AGENT_HEADER, HeaderValue::from_static(USER_AGENT));
+        headers.insert(USER_AGENT_HEADER, HeaderValue::from_static(user_agent));
         headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static("fr-FR,fr;q=0.9"));
         reqwest::Client::builder()
             .default_headers(headers)

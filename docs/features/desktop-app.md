@@ -147,6 +147,12 @@ no external database process, and no bundled PostgreSQL server.
   bridge), including when the disconnect lands while the window is still opening; a status poll
   that arrives after the disconnect answers `AUTH_ATTEMPT_EXPIRED` and starts no sync. A WebView
   `processId` is refused by `POST /api/bnp/auth/complete` and stays usable by its own window.
+- **Passkey prompt** (`passkey/`, Windows only): the same bridge answers
+  `POST /passkey/assertion` for the Natixis passkey login. The shell builds the signed
+  client data for an allow-listed relying party, shows the main window and lets Windows
+  ask for a fingerprint, a PIN or a security key. One prompt is open at a time. The
+  backend learns the route from `NATIXIS_PASSKEY_URL`, which only the shell may set
+  ([ADR](../decisions/2026-11-25-natixis-passkey-on-desktop.md)).
 - **Remaining Chromium sidecars** (amundi, banque-populaire, bourse-direct, caisse-epargne, corum,
   fortuneo, lbp, tr): `fetch_runtime.py` bundles `runtime/python/` (python-build-standalone,
   SHA-256 checked, Tk/IDLE/pip/headers trimmed, `bin/python3` flattened) and `runtime/sidecars/`

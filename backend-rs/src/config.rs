@@ -464,6 +464,8 @@ pub struct Config {
     pub native_sidecars: bool,
     /// APP_SIDECAR_API_KEY (app.sidecar.api-key), trimmed; None when blank.
     pub sidecar_api_key: Option<String>,
+    /// NATIXIS_PASSKEY_URL: the desktop shell's passkey prompt; unset on every server install.
+    pub natixis_passkey_url: Option<String>,
     pub mcp_enabled: bool,
     pub mcp_protocol: String,
     pub mcp_keep_alive_interval: String,
@@ -567,6 +569,9 @@ pub const NATIVE_SIDECAR_URLS: &[(&str, &str, &str)] = &[
     ("cmes", "CMES_BASE_URL", "https://www.creditmutuel-ere.fr"),
     ("sofidy", "SOFIDY_BASE_URL", "https://moncompte.sofidy.com"),
     ("cic", "CIC_BASE_URL", "https://www.cic.fr"),
+    // Natixis spreads over three hosts, so it has no single default: empty means those. Only a
+    // stub on this machine is accepted.
+    ("natixis", "NATIXIS_BASE_URL", ""),
 ];
 
 /// Sidecars with built-in native Rust implementations (opted into via `APP_NATIVE_SIDECARS=true`
@@ -924,6 +929,7 @@ impl Config {
             sidecars,
             native_sidecars,
             sidecar_api_key: env.non_blank("APP_SIDECAR_API_KEY"),
+            natixis_passkey_url: env.non_blank("NATIXIS_PASSKEY_URL"),
             mcp_enabled: bool_or(env, "MCP_ENABLED", true)?,
             mcp_protocol: env.or("MCP_PROTOCOL", "SSE").to_owned(),
             mcp_keep_alive_interval: env.or("MCP_KEEP_ALIVE_INTERVAL", "60s").to_owned(),

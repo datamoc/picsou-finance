@@ -42,6 +42,9 @@ const FRAMEWORK_ROUTES: &[(&str, &str)] = &[
     ("POST", "/api/revolut/webview/start"),
     ("GET", "/api/revolut/webview/status/{}"),
     ("POST", "/api/revolut/webview/cancel/{}"),
+    // Natixis passkey sign-in through the desktop shell (additive, not in Java).
+    ("GET", "/api/natixis/auth/passkey"),
+    ("POST", "/api/natixis/auth/passkey"),
 ];
 
 /// Spring and axum share the {name} syntax; a regex constraint ({id:\d+}) and the variable name
