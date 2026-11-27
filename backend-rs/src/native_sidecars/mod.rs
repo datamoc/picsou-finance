@@ -13,6 +13,7 @@ pub mod cmes;
 pub mod common;
 pub mod degiro;
 pub mod euro_info;
+pub mod lucya;
 pub mod natixis;
 pub mod sofidy;
 

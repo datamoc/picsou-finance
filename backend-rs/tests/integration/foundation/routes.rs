@@ -47,6 +47,8 @@ const FRAMEWORK_ROUTES: &[(&str, &str)] = &[
     // Natixis passkey sign-in through the desktop shell.
     ("GET", "/api/natixis/auth/passkey"),
     ("POST", "/api/natixis/auth/passkey"),
+    // Lucya refresh by signing in (nothing stored).
+    ("POST", "/api/lucya/refresh"),
 ];
 
 /// Spring and axum share the {name} syntax; a regex constraint ({id:\d+}) and the variable name

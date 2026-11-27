@@ -84,6 +84,7 @@ pub mod policies {
         CORUM_RELOGIN = "corumReloginBuckets": [5 / 15];
         LOUVE_AUTH = "louveAuthBuckets": [10 / 15];
         SOFIDY_AUTH = "sofidyAuthBuckets": [5 / 15];
+        LUCYA_AUTH = "lucyaAuthBuckets": [5 / 15];
         GEOCODE = "geocodeBuckets": [60 / 1];
         FORTUNEO_AUTH = "fortuneoAuthBuckets": [5 / 15];
         AMEX_AUTH = "amexAuthBuckets": [5 / 15];

@@ -2197,6 +2197,26 @@
         "serverError": "Impossible de joindre CORUM. Veuillez réessayer."
       }
     },
+    "lucya": {
+      "title": "Lucya",
+      "identifier": "Identifiant",
+      "password": "Mot de passe",
+      "refresh": "Actualiser",
+      "refreshing": "Lecture des contrats…",
+      "scope": "Lit la valeur de vos contrats d'assurance vie et PER Lucya. Rien n'est conservé, ni session ni mot de passe : pour mettre les valeurs à jour, reconnectez-vous ici.",
+      "success_one": "{{count}} contrat mis à jour.",
+      "success_other": "{{count}} contrats mis à jour.",
+      "errors": {
+        "invalidCredentials": "Lucya a refusé l'identifiant ou le mot de passe.",
+        "captchaBlocked": "Lucya demande une vérification anti-robot que Picsou ne passe pas. Réessayez plus tard.",
+        "mfaTypeUnsupported": "Ce compte demande un second facteur que Picsou ne sait pas encore gérer.",
+        "tooManyAttempts": "Trop de tentatives. Patientez avant de réessayer.",
+        "portfolioIncomplete": "Les contrats lus ne correspondent pas au total affiché par Lucya. Vos données existantes ont été conservées.",
+        "formatChanged": "Le format du site Lucya a changé. Vos données existantes ont été conservées.",
+        "invalidData": "Vérifiez l'identifiant et le mot de passe saisis.",
+        "serverError": "Lucya est momentanément indisponible. Veuillez réessayer."
+      }
+    },
     "sofidy": {
       "title": "Sofidy",
       "login": "Code associé",

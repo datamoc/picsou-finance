@@ -1934,6 +1934,26 @@
         "serverError": "CORUM ist nicht erreichbar. Bitte erneut versuchen."
       }
     },
+    "lucya": {
+      "title": "Lucya",
+      "identifier": "Kennung",
+      "password": "Passwort",
+      "refresh": "Aktualisieren",
+      "refreshing": "Verträge werden gelesen…",
+      "scope": "Liest den Wert Ihrer Lucya-Lebensversicherungen und PER-Verträge. Nichts wird gespeichert, weder eine Sitzung noch Ihr Passwort: Melden Sie sich hier erneut an, um die Werte zu aktualisieren.",
+      "success_one": "{{count}} Vertrag aktualisiert.",
+      "success_other": "{{count}} Verträge aktualisiert.",
+      "errors": {
+        "invalidCredentials": "Lucya hat die Kennung oder das Passwort abgelehnt.",
+        "captchaBlocked": "Lucya verlangt eine Anti-Roboter-Prüfung, die Picsou nicht besteht. Versuchen Sie es später erneut.",
+        "mfaTypeUnsupported": "Dieses Konto verlangt einen zweiten Faktor, den Picsou noch nicht unterstützt.",
+        "tooManyAttempts": "Zu viele Versuche. Warten Sie, bevor Sie es erneut versuchen.",
+        "portfolioIncomplete": "Die gelesenen Verträge ergeben nicht die von Lucya angezeigte Summe. Ihre vorhandenen Daten wurden beibehalten.",
+        "formatChanged": "Das Format der Lucya-Website hat sich geändert. Ihre vorhandenen Daten wurden beibehalten.",
+        "invalidData": "Prüfen Sie die eingegebene Kennung und das Passwort.",
+        "serverError": "Lucya ist vorübergehend nicht erreichbar. Bitte versuchen Sie es erneut."
+      }
+    },
     "sofidy": {
       "title": "Sofidy",
       "login": "Partner-Code",
