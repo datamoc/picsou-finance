@@ -20,18 +20,28 @@ use url::Url;
 use super::contract::{NatixisError, PasskeyRequest, SessionResponse};
 use super::pending::LoginState;
 use super::{
-    NativeNatixis, NatixisConfig, check_upstream, classify_transport, read_json, serialize_session,
-    status_message,
+    NativeNatixis, NatixisConfig, check_upstream, classify_transport, format_status_message,
+    read_json, serialize_session, status_message,
 };
 use crate::config::Config;
+use crate::native_sidecars::common::{MAX_RESPONSE_BYTES, ReadBodyError, read_capped_bytes};
 use crate::native_sidecars::{NativeError, NativeResponse};
 
 /// The longest the shell keeps the passkey prompt open.
 const MAX_PROMPT: Duration = Duration::from_secs(120);
 /// The shell answers within [`MAX_PROMPT`]; the margin covers the prompt opening and closing.
 const BRIDGE_TIMEOUT: Duration = Duration::from_secs(135);
-const MAX_CHALLENGE_CHARS: usize = 2048;
+/// The shell signs a challenge of 1024 bytes at most: this is its unpadded base64 length.
+const MAX_CHALLENGE_CHARS: usize = 1366;
 const API_KEY_HEADER: &str = "X-Picsou-Sidecar-Key";
+const WHAT: &str = "passkey prompt";
+/// The members every assertion carries.
+const ASSERTION_MEMBERS: [&str; 4] = [
+    "credentialId",
+    "authenticatorData",
+    "clientDataJson",
+    "signature",
+];
 /// Natixis only serves what looks like its saver space open in a browser: without a browser's
 /// `User-Agent` and `Accept-Language` it answers the passkey check with a 500. The browser named is
 /// the one the flow was verified with, Chrome on Windows, whatever system the shell runs on.
@@ -42,6 +52,7 @@ const BROWSER_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Appl
 pub struct PasskeyBridge {
     url: String,
     key: String,
+    timeout: Duration,
 }
 
 impl std::fmt::Debug for PasskeyBridge {
@@ -68,14 +79,17 @@ impl PasskeyBridge {
     /// None unless `url` is plain HTTP on this machine and the shared key is set: the prompt it
     /// opens signs a bank login, so no other host may ever be asked.
     pub fn new(url: &str, key: &str) -> Option<Self> {
+        let url = url.trim();
         (is_local_http(url) && !key.is_empty()).then(|| Self {
             url: format!("{}/assertion", url.trim_end_matches('/')),
             key: key.to_owned(),
+            timeout: BRIDGE_TIMEOUT,
         })
     }
 }
 
-/// Plain HTTP on this machine, with no credentials, query or fragment.
+/// Plain HTTP to a loopback address, with no credentials, query or fragment. A name, even
+/// `localhost`, would let the system's resolver choose where the key goes.
 fn is_local_http(url: &str) -> bool {
     let Ok(parsed) = Url::parse(url) else {
         return false;
@@ -83,8 +97,7 @@ fn is_local_http(url: &str) -> bool {
     let loopback = match parsed.host() {
         Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
         Some(url::Host::Ipv6(ip)) => ip.is_loopback(),
-        Some(url::Host::Domain(name)) => name == "localhost",
-        None => false,
+        Some(url::Host::Domain(_)) | None => false,
     };
     loopback
         && parsed.scheme() == "http"
@@ -95,10 +108,16 @@ fn is_local_http(url: &str) -> bool {
 }
 
 impl NatixisConfig {
-    /// A config pointing every Natixis call at a stub on this machine, for tests; None for any
-    /// other address, so no setting can send a saver's login elsewhere.
+    /// A config pointing every Natixis call at a stub on a loopback address, for tests; None for
+    /// any other address, so no setting can send a saver's login elsewhere.
     pub fn for_local_stub(url: &str) -> Option<Self> {
-        is_local_http(url).then(|| Self::for_mock_server(url))
+        if is_local_http(url) {
+            return Some(Self::for_mock_server(url));
+        }
+        if !url.is_empty() {
+            tracing::warn!("NATIXIS_BASE_URL is ignored: it needs a loopback http URL");
+        }
+        None
     }
 }
 
@@ -108,8 +127,9 @@ impl NatixisConfig {
 struct Options {
     rp_id: String,
     challenge: String,
-    #[serde(default)]
-    allow_credentials: Vec<AllowedCredential>,
+    /// Left out, like `transports`, when Natixis sends none or `null`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    allow_credentials: Option<Vec<AllowedCredential>>,
     user_verification: Option<String>,
     /// Natixis calls it `timeout`, in milliseconds.
     #[serde(rename(deserialize = "timeout"))]
@@ -160,12 +180,15 @@ impl NativeNatixis {
         })
         .await?;
         // The person answers the prompt: its own budget, outside the Natixis deadlines.
-        let assertion = Self::run_with_deadline(
-            "passkey prompt",
-            BRIDGE_TIMEOUT,
-            ask_the_shell(&bridge, &options),
-        )
-        .await?;
+        // The bridge times itself out, so that an unanswered prompt is not blamed on Natixis.
+        let assertion = ask_the_shell(&bridge, &options).await.map_err(|err| {
+            tracing::warn!(
+                "Natixis passkey prompt failed code={}: {}",
+                err.code,
+                err.reason
+            );
+            err.into_native()
+        })?;
         let session_state = Self::run_with_deadline("passkey login", deadline, async {
             self.verify_assertion(&client, &state, &assertion).await?;
             let finished = self.finish_login(&client, &state).await?;
@@ -257,7 +280,8 @@ impl NativeNatixis {
                 "passkey options name another relying party",
             ));
         }
-        if options.challenge.is_empty() || options.challenge.len() > MAX_CHALLENGE_CHARS {
+        let challenge = options.challenge.trim_end_matches('=');
+        if challenge.is_empty() || challenge.len() > MAX_CHALLENGE_CHARS {
             return Err(NatixisError::format_changed(
                 "passkey options carry no usable challenge",
             ));
@@ -278,7 +302,7 @@ impl NativeNatixis {
             URL_SAFE_NO_PAD
                 .decode(value)
                 .map(|bytes| STANDARD.encode(bytes))
-                .map_err(|_| NatixisError::unavailable("the passkey answer is not base64url"))
+                .map_err(|_| local_failure("the passkey answer is not base64url".to_owned()))
         };
         let mut signed = json!({
             "authenticatorData": standard(&assertion.authenticator_data)?,
@@ -334,54 +358,149 @@ async fn ask_the_shell(
         // Loopback only: a system proxy must never see the request or its key.
         .no_proxy()
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(BRIDGE_TIMEOUT)
+        .timeout(bridge.timeout)
         .build()
-        .map_err(|_| NatixisError::unavailable("failed to build the passkey client"))?;
+        .map_err(|err| local_failure(format!("failed to build the passkey client: {err}")))?;
     let response = client
         .post(&bridge.url)
         .header(API_KEY_HEADER, &bridge.key)
         .json(options)
         .send()
         .await
-        .map_err(|err| classify_transport("passkey prompt", &err))?;
+        .map_err(|err| transport_failure(&err))?;
+    if response.status() != StatusCode::OK {
+        return Err(refusal(response).await);
+    }
+    let bytes = read_capped_bytes(response, MAX_RESPONSE_BYTES)
+        .await
+        .map_err(|err| match err {
+            ReadBodyError::Transport(err) => transport_failure(&err),
+            ReadBodyError::TooLarge { limit } => {
+                local_failure(format!("the passkey answer exceeded {limit} bytes"))
+            }
+        })?;
+    let body: Value = serde_json::from_slice(&bytes)
+        .map_err(|_| local_failure("the passkey answer is not JSON".to_owned()))?;
+    // Names only: a parser message could quote the assertion.
+    let mut wrong: Vec<&str> = ASSERTION_MEMBERS
+        .into_iter()
+        .filter(|member| !body[*member].is_string())
+        .collect();
+    if !matches!(body["userHandle"], Value::Null | Value::String(_)) {
+        wrong.push("userHandle");
+    }
+    serde_json::from_value(body).map_err(|_| {
+        local_failure(format!(
+            "the passkey answer has missing or mistyped members: {wrong:?}"
+        ))
+    })
+}
+
+fn transport_failure(err: &reqwest::Error) -> NatixisError {
+    let reason = classify_transport(WHAT, err).reason;
+    // The shell closes the prompt first: a timeout here is a prompt nobody answered.
+    if err.is_timeout() {
+        attempt_expired(reason)
+    } else {
+        local_failure(reason)
+    }
+}
+
+/// What the shell's refusal means for the person signing in.
+async fn refusal(response: reqwest::Response) -> NatixisError {
     let status = response.status();
-    // Closed, timed out, or one already open: the person can try again.
-    if matches!(
-        status,
-        StatusCode::GONE | StatusCode::REQUEST_TIMEOUT | StatusCode::CONFLICT
-    ) {
-        return Err(NatixisError::new(
-            StatusCode::GONE,
-            "AUTH_ATTEMPT_EXPIRED",
-            format!("passkey prompt answered {}", status.as_u16()),
-        ));
+    let detail = read_json(response, WHAT)
+        .await
+        .ok()
+        .and_then(|body| body["detail"].as_str().map(str::to_owned));
+    let reason = format_status_message(WHAT, status, detail.as_slice());
+    match status {
+        // Closed, timed out, or one already open: the person can try again.
+        StatusCode::GONE | StatusCode::REQUEST_TIMEOUT | StatusCode::CONFLICT => {
+            attempt_expired(reason)
+        }
+        // This computer cannot show the prompt: trying again would not help.
+        StatusCode::NOT_IMPLEMENTED => NatixisError::new(status, "MFA_TYPE_UNSUPPORTED", reason),
+        // The shell refuses to sign what Natixis asks for.
+        StatusCode::BAD_REQUEST | StatusCode::FORBIDDEN => NatixisError::format_changed(reason),
+        _ => local_failure(reason),
     }
-    if status != StatusCode::OK {
-        return Err(NatixisError::unavailable(format!(
-            "passkey prompt answered {}",
-            status.as_u16()
-        )));
-    }
-    let body = read_json(response, "passkey prompt").await?;
-    serde_json::from_value(body)
-        .map_err(|_| NatixisError::unavailable("the passkey answer has an unexpected shape"))
+}
+
+fn attempt_expired(reason: String) -> NatixisError {
+    NatixisError::new(StatusCode::GONE, "AUTH_ATTEMPT_EXPIRED", reason)
+}
+
+/// A failure between Picsou and its own shell: the bank has no part in it.
+fn local_failure(reason: String) -> NatixisError {
+    NatixisError::new(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", reason)
 }
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
     use super::*;
+
+    const KEY: &str = "shared-key-value";
+
+    /// What Natixis sends, with and without a named transport.
+    fn options() -> Options {
+        serde_json::from_value(json!({
+            "rpId": "idp.example",
+            "challenge": "Y2hhbGxlbmdl",
+            "timeout": 60000,
+            "allowCredentials": [
+                { "type": "public-key", "id": "Y3JlZA" },
+                { "type": "public-key", "id": "a2V5", "transports": ["usb"] },
+            ],
+            "userVerification": "required"
+        }))
+        .expect("options")
+    }
+
+    /// A fake shell that gives `reply`.
+    async fn shell(reply: ResponseTemplate) -> (MockServer, PasskeyBridge) {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/passkey/assertion"))
+            .respond_with(reply)
+            .mount(&server)
+            .await;
+        let bridge = PasskeyBridge::new(&format!("{}/passkey", server.uri()), KEY).expect("bridge");
+        (server, bridge)
+    }
+
+    async fn ask(reply: ResponseTemplate) -> (MockServer, Result<Assertion, NatixisError>) {
+        let (server, bridge) = shell(reply).await;
+        let answer = ask_the_shell(&bridge, &options()).await;
+        (server, answer)
+    }
+
+    fn assertion() -> Value {
+        json!({
+            "credentialId": "Y3JlZA",
+            "authenticatorData": "AQ",
+            "clientDataJson": "e30",
+            "signature": "Ag",
+            "userHandle": "Aw",
+        })
+    }
 
     #[test]
     fn the_bridge_is_only_ever_on_this_machine() {
-        for url in [
-            "http://127.0.0.1:5000/passkey",
-            "http://localhost:5000/passkey",
-            "http://[::1]:5000/passkey",
-        ] {
+        for url in ["http://127.0.0.1:5000/passkey", "http://[::1]:5000/passkey"] {
             assert!(PasskeyBridge::new(url, "key").is_some(), "{url}");
         }
         for url in [
             "https://example.com/passkey",
+            "https://127.0.0.1/passkey",
+            "http://localhost:5000/passkey",
+            "http://127.0.0.1/passkey#x",
             "http://192.168.1.10/passkey",
             "http://127.0.0.1.example.com/passkey",
             "http://user:pw@127.0.0.1/passkey",
@@ -391,12 +510,19 @@ mod tests {
             assert!(PasskeyBridge::new(url, "key").is_none(), "{url}");
         }
         assert!(PasskeyBridge::new("http://127.0.0.1:5000/passkey", "").is_none());
+        let padded = PasskeyBridge::new(" http://127.0.0.1:5000/passkey/ ", "key").expect("bridge");
+        assert_eq!(padded.url, "http://127.0.0.1:5000/passkey/assertion");
     }
 
     #[test]
     fn the_address_override_only_ever_points_at_this_machine() {
         assert!(NatixisConfig::for_local_stub("http://127.0.0.1:5000").is_some());
-        for url in ["", "https://example.com", "http://192.168.1.10:5000"] {
+        for url in [
+            "",
+            "https://example.com",
+            "http://192.168.1.10:5000",
+            "http://localhost:5000",
+        ] {
             assert!(NatixisConfig::for_local_stub(url).is_none(), "{url}");
         }
     }
@@ -407,5 +533,148 @@ mod tests {
             PasskeyBridge::new("http://127.0.0.1:5000/passkey", "very-secret-key").expect("bridge");
 
         assert!(!format!("{bridge:?}").contains("very-secret-key"));
+    }
+
+    #[tokio::test]
+    async fn the_shell_gets_the_options_with_the_key_and_answers_the_assertion() {
+        let (server, answer) = ask(ResponseTemplate::new(200).set_body_json(assertion())).await;
+
+        let requests = server.received_requests().await.expect("requests");
+        assert_eq!(requests[0].headers[API_KEY_HEADER], KEY);
+        let sent: Value = serde_json::from_slice(&requests[0].body).expect("JSON");
+        assert_eq!(
+            sent,
+            json!({
+                "rpId": "idp.example",
+                "challenge": "Y2hhbGxlbmdl",
+                "allowCredentials": [
+                    { "id": "Y3JlZA" },
+                    { "id": "a2V5", "transports": ["usb"] },
+                ],
+                "userVerification": "required",
+                "timeoutMs": 60000,
+            })
+        );
+        let answer = answer.expect("assertion");
+        assert_eq!(answer.credential_id, "Y3JlZA");
+        assert_eq!(answer.authenticator_data, "AQ");
+        assert_eq!(answer.client_data_json, "e30");
+        assert_eq!(answer.signature, "Ag");
+        assert_eq!(answer.user_handle.as_deref(), Some("Aw"));
+    }
+
+    #[tokio::test]
+    async fn a_prompt_that_was_not_confirmed_can_be_tried_again() {
+        for status in [410, 408, 409] {
+            let (_server, answer) = ask(ResponseTemplate::new(status)).await;
+
+            let refused = answer.err().expect("refused");
+            assert_eq!(refused.code, "AUTH_ATTEMPT_EXPIRED", "{status}");
+            assert_eq!(refused.status, StatusCode::GONE, "{status}");
+        }
+    }
+
+    #[test]
+    fn a_missing_or_null_credential_list_is_not_forwarded() {
+        for options in [
+            json!({ "rpId": "idp.example", "challenge": "AA" }),
+            json!({ "rpId": "idp.example", "challenge": "AA", "allowCredentials": null }),
+        ] {
+            let options: Options = serde_json::from_value(options).expect("options");
+
+            let sent = serde_json::to_value(options).expect("JSON");
+
+            assert!(sent.get("allowCredentials").is_none(), "{sent}");
+        }
+    }
+
+    #[tokio::test]
+    async fn each_other_answer_says_where_the_fault_is() {
+        for (reply, code) in [
+            (ResponseTemplate::new(501), "MFA_TYPE_UNSUPPORTED"),
+            (ResponseTemplate::new(400), "UPSTREAM_FORMAT_CHANGED"),
+            (ResponseTemplate::new(403), "UPSTREAM_FORMAT_CHANGED"),
+            (ResponseTemplate::new(401), "INTERNAL_ERROR"),
+            (ResponseTemplate::new(500), "INTERNAL_ERROR"),
+            (
+                ResponseTemplate::new(200).set_body_string("<html>"),
+                "INTERNAL_ERROR",
+            ),
+        ] {
+            let (_server, answer) = ask(reply).await;
+
+            let refused = answer.err().expect("refused");
+            assert_eq!(refused.code, code, "{}", refused.reason);
+        }
+    }
+
+    #[tokio::test]
+    async fn the_log_reason_names_the_cause_but_no_assertion_value() {
+        let refusal = json!({ "detail": "PASSKEY_UNAVAILABLE" });
+        let (_server, answer) = ask(ResponseTemplate::new(501).set_body_json(refusal)).await;
+        let reason = answer.err().expect("refused").reason;
+        assert!(reason.contains("PASSKEY_UNAVAILABLE"), "{reason}");
+
+        let partial = json!({ "signature": "secret-signature" });
+        let (_server, answer) = ask(ResponseTemplate::new(200).set_body_json(partial)).await;
+        let reason = answer.err().expect("refused").reason;
+        assert!(reason.contains("credentialId"), "{reason}");
+        assert!(!reason.contains("secret-signature"), "{reason}");
+
+        let mut mistyped = assertion();
+        mistyped["userHandle"] = json!(5);
+        let (_server, answer) = ask(ResponseTemplate::new(200).set_body_json(mistyped)).await;
+        let reason = answer.err().expect("refused").reason;
+        assert!(reason.contains("userHandle"), "{reason}");
+    }
+
+    #[tokio::test]
+    async fn a_prompt_nobody_answers_expires() {
+        let slow = ResponseTemplate::new(200).set_delay(Duration::from_secs(5));
+        let (_server, mut bridge) = shell(slow).await;
+        bridge.timeout = Duration::from_millis(50);
+
+        let answer = ask_the_shell(&bridge, &options()).await;
+
+        assert_eq!(answer.err().expect("refused").code, "AUTH_ATTEMPT_EXPIRED");
+    }
+
+    #[tokio::test]
+    async fn an_answer_that_stalls_halfway_expires_too() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("listener");
+        let url = format!("http://{}/passkey", listener.local_addr().expect("address"));
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.expect("connection");
+            let _ = socket.read(&mut [0; 4096]).await.expect("request");
+            let headers = b"HTTP/1.1 200 OK\r\ncontent-length: 10\r\n\r\n";
+            socket.write_all(headers).await.expect("headers");
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        });
+        let mut bridge = PasskeyBridge::new(&url, KEY).expect("bridge");
+        bridge.timeout = Duration::from_millis(500);
+
+        let answer = ask_the_shell(&bridge, &options()).await;
+
+        assert_eq!(answer.err().expect("refused").code, "AUTH_ATTEMPT_EXPIRED");
+    }
+
+    #[tokio::test]
+    async fn a_shell_that_cannot_be_reached_is_not_the_banks_fault() {
+        let bridge = PasskeyBridge::new("http://127.0.0.1:1/passkey", KEY).expect("bridge");
+
+        let answer = ask_the_shell(&bridge, &options()).await;
+
+        assert_eq!(answer.err().expect("refused").code, "INTERNAL_ERROR");
+    }
+
+    /// Following one would hand the key and the challenge to whatever it names.
+    #[tokio::test]
+    async fn a_redirect_is_never_followed() {
+        let elsewhere = ResponseTemplate::new(307).insert_header("location", "/elsewhere");
+
+        let (server, answer) = ask(elsewhere).await;
+
+        assert_eq!(answer.err().expect("refused").code, "INTERNAL_ERROR");
+        assert_eq!(server.received_requests().await.expect("requests").len(), 1);
     }
 }

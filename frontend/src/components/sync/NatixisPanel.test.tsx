@@ -131,6 +131,7 @@ describe('NatixisPanel', () => {
     ['AUTH_ATTEMPT_EXPIRED', 'passkeyNotConfirmed'],
     ['MFA_TYPE_UNSUPPORTED', 'passkeyNotOffered'],
     ['INVALID_CREDENTIALS', 'passkeyRefused'],
+    ['INTERNAL_ERROR', 'passkeyFailed'],
     ['UPSTREAM_FORMAT_CHANGED', 'formatChanged'],
   ])('explains %s after a passkey sign-in', async (code, message) => {
     apiGet.mockImplementation((url: string) =>

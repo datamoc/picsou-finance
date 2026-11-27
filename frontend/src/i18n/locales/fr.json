@@ -2065,7 +2065,8 @@
         "waiting": "Confirmez dans la fenêtre de la clé d'accès."
       },
       "errors": {
-        "passkeyNotOffered": "Ce compte ne propose pas la connexion par clé d'accès. Connectez-vous avec votre mot de passe.",
+        "passkeyNotOffered": "La connexion par clé d'accès n'est pas possible ici : ce compte n'en propose pas, ou cet ordinateur ne peut pas la demander. Connectez-vous avec votre mot de passe.",
+        "passkeyFailed": "Picsou n'a pas pu mener à bien la demande de clé d'accès sur cet ordinateur. Réessayez, ou connectez-vous avec votre mot de passe.",
         "passkeyNotConfirmed": "La demande de clé d'accès a été fermée ou a expiré. Fermez toute fenêtre de clé d'accès encore ouverte, puis réessayez.",
         "passkeyRefused": "Natixis Interépargne a refusé l'e-mail ou la clé d'accès.",
         "tooManyAttempts": "Natixis Interépargne a bloqué les nouvelles tentatives. Réessayez plus tard.",

@@ -2065,7 +2065,8 @@
         "waiting": "Confirm in the passkey window."
       },
       "errors": {
-        "passkeyNotOffered": "This account offers no passkey sign-in. Sign in with your password.",
+        "passkeyNotOffered": "Passkey sign-in is not possible here: this account offers none, or this computer cannot ask for one. Sign in with your password.",
+        "passkeyFailed": "Picsou could not complete the passkey request on this computer. Try again, or sign in with your password.",
         "passkeyNotConfirmed": "The passkey request was closed or ran out of time. Close any passkey window still open, then try again.",
         "passkeyRefused": "Natixis Interépargne refused the e-mail or the passkey.",
         "tooManyAttempts": "Natixis Interépargne blocked further attempts. Please try again later.",

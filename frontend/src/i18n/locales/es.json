@@ -1716,7 +1716,8 @@
         "waiting": "Confirma en la ventana de la passkey."
       },
       "errors": {
-        "passkeyNotOffered": "Esta cuenta no ofrece acceso con passkey. Accede con tu contraseña.",
+        "passkeyNotOffered": "Aquí no es posible acceder con passkey: esta cuenta no la ofrece o este equipo no puede pedirla. Accede con tu contraseña.",
+        "passkeyFailed": "Picsou no pudo completar la solicitud de passkey en este equipo. Vuelve a intentarlo o accede con tu contraseña.",
         "passkeyNotConfirmed": "La solicitud de passkey se cerró o caducó. Cierra cualquier ventana de passkey abierta y vuelve a intentarlo.",
         "passkeyRefused": "Natixis Interépargne rechazó el correo electrónico o la passkey.",
         "tooManyAttempts": "Natixis Interépargne bloqueó nuevos intentos. Inténtalo más tarde.",

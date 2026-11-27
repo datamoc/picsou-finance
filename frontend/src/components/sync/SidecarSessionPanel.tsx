@@ -108,6 +108,8 @@ const PASSKEY_ERROR_MESSAGE_SUFFIXES: Record<string, string> = {
   MFA_TYPE_UNSUPPORTED: "passkeyNotOffered",
   /** The prompt was closed, timed out, or another one was already open. */
   AUTH_ATTEMPT_EXPIRED: "passkeyNotConfirmed",
+  /** The desktop shell or its answer failed: the bank had no part in it. */
+  INTERNAL_ERROR: "passkeyFailed",
 }
 
 /**

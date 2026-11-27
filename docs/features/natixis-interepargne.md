@@ -82,9 +82,15 @@ UI ◀── session status; the first sync is queued
   verification body is `rawId` and `response`, with no `id` or `type`.
 - The relying party in the options must be the identity provider's host; the shell
   signs for `auth-nie.natixis.com` only.
-- Errors: no `WEBAUTHN` mode is `MFA_TYPE_UNSUPPORTED`; a prompt closed, timed out or
-  already open is `AUTH_ATTEMPT_EXPIRED`; a refused assertion is `INVALID_CREDENTIALS`.
-  The panel words these three for a passkey.
+- Errors: no `WEBAUTHN` mode, or a computer that cannot show the prompt (`501`), is
+  `MFA_TYPE_UNSUPPORTED`; a prompt closed, timed out or already open is
+  `AUTH_ATTEMPT_EXPIRED`; a refused assertion is `INVALID_CREDENTIALS`; options the shell
+  refuses to sign are `UPSTREAM_FORMAT_CHANGED`; any other failure of the shell or of its
+  answer is `INTERNAL_ERROR`. The panel words all but `UPSTREAM_FORMAT_CHANGED` for a
+  passkey, so a shell failure does not read as a Natixis outage there (the API's own
+  `detail` and the sync log still use the bank's generic wording).
+- The shell is only reached at a loopback address (`localhost` is refused: a name lets the
+  resolver choose where the key goes), with no proxy and no redirect.
 
 ### Operations history
 

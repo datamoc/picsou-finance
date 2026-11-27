@@ -46,7 +46,12 @@ struct BridgeState {
     bnp: Arc<BnpWebviewManager>,
     amex: Arc<AmexWebviewManager>,
     revolut: Arc<RevolutWebviewManager>,
-    passkey: passkey::Gate,
+}
+
+/// The passkey route has its own state, so that tests can serve it without a running app.
+struct PasskeyState {
+    api_key: String,
+    gate: passkey::Gate,
     authenticator: Arc<dyn passkey::Authenticator>,
 }
 
@@ -97,14 +102,13 @@ pub fn start(app: AppHandle, api_key: String) -> io::Result<WebviewBridge> {
     let bnp = Arc::new(BnpWebviewManager::new());
     let amex = Arc::new(AmexWebviewManager::new());
     let revolut = Arc::new(RevolutWebviewManager::new());
+    let passkey_routes = passkey_router(api_key.clone(), passkey::system(app.clone()));
     let state = Arc::new(BridgeState {
         app: app.clone(),
         api_key,
         bnp: Arc::clone(&bnp),
         amex: Arc::clone(&amex),
         revolut: Arc::clone(&revolut),
-        passkey: passkey::Gate::default(),
-        authenticator: passkey::system(app.clone()),
     });
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -124,7 +128,7 @@ pub fn start(app: AppHandle, api_key: String) -> io::Result<WebviewBridge> {
                     tracing::error!("webview bank bridge listener conversion failed");
                     return;
                 };
-                let router = build_router(state);
+                let router = build_router(state).merge(passkey_routes);
                 let served = axum::serve(tcp, router)
                     .with_graceful_shutdown(async move {
                         let _ = shutdown_rx.await;
@@ -184,8 +188,6 @@ fn build_router(state: Arc<BridgeState>) -> axum::Router {
             "/revolut/session/{member_id}",
             delete(revolut_delete_session),
         )
-        // Passkey assertion for a bank login
-        .route("/passkey/assertion", post(passkey_assertion))
         .with_state(state)
 }
 
@@ -496,16 +498,29 @@ async fn health() -> impl IntoResponse {
     Json(json!({ "status": "ok", "webview": true }))
 }
 
+fn passkey_router(api_key: String, authenticator: Arc<dyn passkey::Authenticator>) -> axum::Router {
+    axum::Router::new()
+        .route("/passkey/assertion", post(passkey_assertion))
+        .with_state(Arc::new(PasskeyState {
+            api_key,
+            gate: passkey::Gate::default(),
+            authenticator,
+        }))
+}
+
 async fn passkey_assertion(
-    State(state): State<Arc<BridgeState>>,
+    State(state): State<Arc<PasskeyState>>,
     headers: HeaderMap,
-    Json(body): Json<passkey::AssertionRequest>,
+    body: axum::body::Bytes,
 ) -> Response {
     if !sidecar_key_valid(&headers, &state.api_key) {
         return unauthorized_response();
     }
+    let Ok(request) = serde_json::from_slice(&body) else {
+        return error_response(ApiError::new(StatusCode::BAD_REQUEST, "INVALID_DATA"));
+    };
     let authenticator = Arc::clone(&state.authenticator);
-    match state.passkey.assert(authenticator, body).await {
+    match state.gate.assert(authenticator, request).await {
         Ok(reply) => (StatusCode::OK, Json(reply)).into_response(),
         Err(refusal) => error_response(ApiError::new(refusal.status, refusal.detail)),
     }
@@ -785,6 +800,49 @@ mod tests {
 
         headers.insert(API_KEY_HEADER, HeaderValue::from_static("secret-key"));
         assert!(sidecar_key_valid(&headers, "secret-key"));
+    }
+
+    /// A prompt the person closes at once.
+    struct Closed;
+
+    impl passkey::Authenticator for Closed {
+        fn assert(
+            &self,
+            _prompt: &passkey::Prompt,
+        ) -> Result<passkey::Assertion, passkey::Failure> {
+            Err(passkey::Failure::Cancelled)
+        }
+    }
+
+    #[tokio::test]
+    async fn the_passkey_route_checks_the_key_before_the_body_and_names_each_refusal() {
+        let listener = tokio::net::TcpListener::bind((LOOPBACK, 0)).await.unwrap();
+        let url = format!(
+            "http://{}/passkey/assertion",
+            listener.local_addr().unwrap()
+        );
+        let router = passkey_router("secret-key".to_owned(), Arc::new(Closed));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let valid = r#"{"rpId":"auth-nie.natixis.com","challenge":"AAAA"}"#;
+
+        for (key, body, status, detail) in [
+            ("wrong", "{}", StatusCode::UNAUTHORIZED, "UNAUTHORIZED"),
+            ("secret-key", "{}", StatusCode::BAD_REQUEST, "INVALID_DATA"),
+            ("secret-key", valid, StatusCode::GONE, "PASSKEY_CANCELLED"),
+        ] {
+            let response = client
+                .post(&url)
+                .header(API_KEY_HEADER, key)
+                .body(body)
+                .send()
+                .await
+                .unwrap();
+
+            assert_eq!(response.status(), status, "{detail}");
+            let answer: serde_json::Value = response.json().await.unwrap();
+            assert_eq!(answer["detail"], detail);
+        }
     }
 
     #[test]

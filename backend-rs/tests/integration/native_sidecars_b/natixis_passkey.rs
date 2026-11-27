@@ -45,6 +45,7 @@ struct Behaviour {
     modes: Value,
     credential: Value,
     rp_id: Option<String>,
+    challenge: String,
     shell: (u16, Value),
     shell_delay: Duration,
     verification_status: u16,
@@ -95,7 +96,7 @@ impl Respond for Fake {
                 json_with(
                     200,
                     json!({
-                        "challenge": "Y2hhbGxlbmdl",
+                        "challenge": b.challenge,
                         "timeout": 600000,
                         "rpId": rp_id,
                         "allowCredentials": [b.credential.clone()],
@@ -140,6 +141,7 @@ async fn fake_natixis() -> (MockServer, Arc<Mutex<Behaviour>>) {
         modes: json!({ "items": [{ "mode": "PASSWORD" }, { "mode": "WEBAUTHN" }] }),
         credential: json!({ "type": "public-key", "id": "Y3JlZA", "transports": ["internal"] }),
         rp_id: None,
+        challenge: "Y2hhbGxlbmdl".to_owned(),
         // base64url of bytes whose standard form needs `+`, `/` and padding.
         shell: (
             200,
@@ -397,18 +399,71 @@ async fn a_prompt_that_was_not_confirmed_sends_nothing_to_natixis() {
 }
 
 #[tokio::test]
-async fn a_shell_that_cannot_prompt_is_unavailable() {
-    for status in [401, 403, 500, 501] {
+async fn a_shell_failure_is_never_blamed_on_natixis() {
+    for (status, detail, expected) in [
+        (
+            501,
+            "PASSKEY_UNAVAILABLE",
+            refused(StatusCode::NOT_IMPLEMENTED, "MFA_TYPE_UNSUPPORTED"),
+        ),
+        (
+            500,
+            "PASSKEY_FAILED",
+            refused(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR"),
+        ),
+    ] {
         let h = Harness::start(true).await;
-        h.change(|b| b.shell = (status, json!({ "detail": "PASSKEY_FAILED" })));
+        h.change(|b| b.shell = (status, json!({ "detail": detail })));
 
         let outcome = h.sign_in().await.unwrap_err();
 
+        assert_eq!(outcome, expected, "{detail}");
+        assert_eq!(h.requests().last().unwrap().path, SHELL_PATH);
+    }
+}
+
+#[tokio::test]
+async fn an_unreadable_assertion_is_a_local_failure() {
+    let h = Harness::start(true).await;
+    h.change(|b| b.shell.1["signature"] = json!("***"));
+
+    let outcome = h.sign_in().await.unwrap_err();
+
+    assert_eq!(
+        outcome,
+        refused(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR")
+    );
+    assert!(
+        h.sent("/auth/v1/webauthn/authentication/verifications")
+            .is_none()
+    );
+}
+
+/// The shell signs 1024 bytes at most, which base64 writes in 1366 characters before padding.
+#[tokio::test]
+async fn a_challenge_the_shell_would_refuse_opens_no_prompt() {
+    for (challenge, prompted) in [
+        (format!("{}==", "A".repeat(1366)), true),
+        ("A".repeat(1367), false),
+        ("==".to_owned(), false),
+    ] {
+        let h = Harness::start(true).await;
+        h.change(|b| b.challenge = challenge.clone());
+
+        let outcome = h.sign_in().await;
+
         assert_eq!(
-            outcome,
-            refused(StatusCode::BAD_GATEWAY, "UPSTREAM_UNAVAILABLE"),
-            "{status}"
+            h.sent(SHELL_PATH).is_some(),
+            prompted,
+            "{}",
+            challenge.len()
         );
+        if !prompted {
+            assert_eq!(
+                outcome.unwrap_err(),
+                refused(StatusCode::BAD_GATEWAY, "UPSTREAM_FORMAT_CHANGED")
+            );
+        }
     }
 }
 

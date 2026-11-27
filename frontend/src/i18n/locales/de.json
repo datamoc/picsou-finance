@@ -1716,7 +1716,8 @@
         "waiting": "Bestätige im Passkey-Fenster."
       },
       "errors": {
-        "passkeyNotOffered": "Dieses Konto bietet keine Anmeldung per Passkey. Melde dich mit deinem Passwort an.",
+        "passkeyNotOffered": "Die Anmeldung per Passkey ist hier nicht möglich: Dieses Konto bietet keine an, oder dieser Computer kann keine abfragen. Melde dich mit deinem Passwort an.",
+        "passkeyFailed": "Picsou konnte die Passkey-Abfrage auf diesem Computer nicht abschließen. Versuche es erneut oder melde dich mit deinem Passwort an.",
         "passkeyNotConfirmed": "Die Passkey-Abfrage wurde geschlossen oder ist abgelaufen. Schließe offene Passkey-Fenster und versuche es erneut.",
         "passkeyRefused": "Natixis Interépargne hat die E-Mail oder den Passkey abgelehnt.",
         "tooManyAttempts": "Natixis Interépargne hat weitere Versuche blockiert. Bitte versuche es später erneut.",

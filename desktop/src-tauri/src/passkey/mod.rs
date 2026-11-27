@@ -307,15 +307,16 @@ mod tests {
 
     use super::*;
 
-    struct Answer(Result<(), Failure>);
+    /// Answers with the given user handle, or fails.
+    struct Answer(Result<Option<Vec<u8>>, Failure>);
 
     impl Authenticator for Answer {
         fn assert(&self, _prompt: &Prompt) -> Result<Assertion, Failure> {
-            self.0.map(|()| Assertion {
+            self.0.clone().map(|user_handle| Assertion {
                 credential_id: vec![0xfb, 0xff],
                 authenticator_data: vec![1, 2, 3],
                 signature: vec![4, 5],
-                user_handle: None,
+                user_handle,
             })
         }
     }
@@ -339,6 +340,26 @@ mod tests {
         assert_eq!(prompt.rp_id, "auth-nie.natixis.com");
     }
 
+    /// The body the backend's `PasskeyBridge` test pins, for a relying party the shell allows.
+    #[test]
+    fn the_shell_reads_what_the_backend_sends() {
+        let body = json!({
+            "rpId": "auth-nie.natixis.com",
+            "challenge": "Y2hhbGxlbmdl",
+            "allowCredentials": [
+                { "id": "Y3JlZA" },
+                { "id": "a2V5", "transports": ["usb"] },
+            ],
+            "userVerification": "required",
+            "timeoutMs": 60000,
+        });
+
+        let prompt = prepare(request(body)).expect("prompt");
+
+        assert_eq!(prompt.allow_credentials[1].transports, [Transport::Usb]);
+        assert_eq!(prompt.timeout, Duration::from_secs(60));
+    }
+
     #[test]
     fn another_relying_party_is_refused() {
         for rp_id in [
@@ -356,30 +377,24 @@ mod tests {
     #[test]
     fn credentials_are_decoded_with_their_known_transports() {
         let mut body = natixis();
-        body["allowCredentials"] =
-            json!([{ "id": "-_8", "transports": ["usb", "smart-card", "internal"] }]);
+        body["allowCredentials"] = json!([
+            { "id": "-_8", "transports": ["usb", "smart-card", "internal"] },
+            { "id": "-_8" },
+        ]);
 
         let prompt = prepare(request(body)).expect("prompt");
 
+        let credential = |transports| AllowedCredential {
+            id: vec![0xfb, 0xff],
+            transports,
+        };
         assert_eq!(
             prompt.allow_credentials,
-            vec![AllowedCredential {
-                id: vec![0xfb, 0xff],
-                transports: vec![Transport::Usb, Transport::Internal],
-            }]
+            [
+                credential(vec![Transport::Usb, Transport::Internal]),
+                credential(vec![]),
+            ]
         );
-    }
-
-    #[test]
-    fn a_bank_may_leave_out_everything_but_the_challenge_and_the_credential_ids() {
-        let mut body = natixis();
-        body["allowCredentials"] = json!([{ "id": "-_8" }]);
-        body["userVerification"] = Value::Null;
-
-        let prompt = prepare(request(body)).expect("prompt");
-
-        assert!(prompt.allow_credentials[0].transports.is_empty());
-        assert_eq!(prompt.timeout, MAX_TIMEOUT);
     }
 
     #[test]
@@ -422,10 +437,29 @@ mod tests {
         }
     }
 
+    #[test]
+    fn too_many_or_oversized_credentials_and_unknown_fields_are_refused() {
+        let oversized = URL_SAFE_NO_PAD.encode(vec![0u8; MAX_CREDENTIAL_ID_BYTES + 1]);
+        let too_many = vec![json!({ "id": "-_8" }); MAX_CREDENTIALS + 1];
+        for (field, value) in [
+            ("allowCredentials", json!(too_many)),
+            ("allowCredentials", json!([{ "id": oversized }])),
+            ("allowCredentials", json!([{ "id": "-_8", "type": "x" }])),
+            ("origin", json!("https://example.com")),
+        ] {
+            let mut body = natixis();
+            body[field] = value;
+
+            let read = serde_json::from_value(body).map_err(|_| INVALID);
+
+            assert_eq!(read.and_then(prepare).expect_err(field), INVALID);
+        }
+    }
+
     #[tokio::test]
     async fn an_assertion_comes_back_as_base64url_with_the_signed_client_data() {
         let reply = Gate::default()
-            .assert(Arc::new(Answer(Ok(()))), request(natixis()))
+            .assert(Arc::new(Answer(Ok(None))), request(natixis()))
             .await
             .expect("reply");
 
@@ -444,18 +478,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_user_handle_the_authenticator_names_comes_back() {
+        let discoverable = Arc::new(Answer(Ok(Some(vec![6]))));
+
+        let reply = Gate::default()
+            .assert(discoverable, request(natixis()))
+            .await
+            .expect("reply");
+
+        assert_eq!(serde_json::to_value(reply).unwrap()["userHandle"], "Bg");
+    }
+
+    #[tokio::test]
     async fn each_failure_has_its_own_answer() {
-        for (failure, detail) in [
-            (Failure::Cancelled, "PASSKEY_CANCELLED"),
-            (Failure::TimedOut, "PASSKEY_TIMEOUT"),
-            (Failure::Unavailable, "PASSKEY_UNAVAILABLE"),
-            (Failure::System(-1), "PASSKEY_FAILED"),
+        for (failure, status, detail) in [
+            (Failure::Cancelled, 410, "PASSKEY_CANCELLED"),
+            (Failure::TimedOut, 408, "PASSKEY_TIMEOUT"),
+            (Failure::Unavailable, 501, "PASSKEY_UNAVAILABLE"),
+            (Failure::System(-1), 500, "PASSKEY_FAILED"),
         ] {
             let refused = Gate::default()
                 .assert(Arc::new(Answer(Err(failure))), request(natixis()))
                 .await
                 .expect_err("refused");
 
+            assert_eq!(refused.status.as_u16(), status, "{detail}");
             assert_eq!(refused.detail, detail);
         }
     }
@@ -474,8 +521,10 @@ mod tests {
         }
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    async fn a_second_prompt_is_refused_while_one_is_open() {
+    type Caller = tokio::task::JoinHandle<Result<AssertionReply, Refusal>>;
+
+    /// A gate whose first caller waits on an open prompt, until the sender releases it.
+    async fn open_prompt() -> (Arc<Gate>, Caller, mpsc::Sender<()>) {
         let (opened, is_open) = mpsc::channel();
         let (release, released) = mpsc::channel();
         let gate = Arc::new(Gate::default());
@@ -490,9 +539,29 @@ mod tests {
         tokio::task::spawn_blocking(move || is_open.recv().unwrap())
             .await
             .unwrap();
+        (gate, first, release)
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_caller_that_gives_up_does_not_free_the_prompt() {
+        let (gate, first, release) = open_prompt().await;
+        first.abort();
+        assert!(first.await.expect_err("aborted").is_cancelled());
 
         let second = gate
-            .assert(Arc::new(Answer(Ok(()))), request(natixis()))
+            .assert(Arc::new(Answer(Ok(None))), request(natixis()))
+            .await;
+
+        release.send(()).unwrap();
+        assert_eq!(second.expect_err("busy").detail, "PASSKEY_BUSY");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_second_prompt_is_refused_while_one_is_open() {
+        let (gate, first, release) = open_prompt().await;
+
+        let second = gate
+            .assert(Arc::new(Answer(Ok(None))), request(natixis()))
             .await;
 
         assert_eq!(second.expect_err("busy").detail, "PASSKEY_BUSY");
@@ -502,7 +571,7 @@ mod tests {
             "PASSKEY_CANCELLED"
         );
         assert!(gate
-            .assert(Arc::new(Answer(Ok(()))), request(natixis()))
+            .assert(Arc::new(Answer(Ok(None))), request(natixis()))
             .await
             .is_ok());
     }
