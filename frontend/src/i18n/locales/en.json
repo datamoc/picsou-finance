@@ -3859,6 +3859,10 @@
       "title": "Could not sign you in",
       "description": "Picsou could not open your session automatically. Quit Picsou from its tray icon, then start it again."
     },
+    "hello": {
+      "button": "Continue with Windows Hello",
+      "error": "Windows Hello unlock failed. Try again or sign in with your password."
+    },
     "update": {
       "bannerTitle": "Picsou {{version}} is available",
       "install": "Install",

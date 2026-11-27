@@ -49,6 +49,16 @@ const { loginMutation } = vi.hoisted(() => ({
 }))
 vi.mock('@/features/mfa/hooks', () => ({ useLoginWithRememberMe: () => loginMutation }))
 
+const { helloAvailable, helloUnlock } = vi.hoisted(() => ({
+  helloAvailable: vi.fn().mockResolvedValue(false),
+  helloUnlock: vi.fn(),
+}))
+vi.mock('@/features/desktop/hello', () => ({
+  HELLO_CANCELLED: 'cancelled',
+  helloAvailable,
+  helloUnlock,
+}))
+
 const { LoginPage } = await import('./LoginPage')
 const { useAppStore } = await import('@/stores/app-store')
 const { consumeSsoRevalidate, markSsoRevalidate, rememberSsoPreference, ssoRememberPreference } =
@@ -405,6 +415,128 @@ describe('LoginPage SSO', () => {
         renderLogin('/login')
 
         expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      } finally {
+        delete (window as Window & { isTauri?: boolean }).isTauri
+      }
+    })
+  })
+
+  describe('Desktop Windows Hello', () => {
+    const lockedDesktop = () =>
+      useSetupStatus.mockReturnValue({
+        data: {
+          state: 'COMPLETE',
+          needsSetup: false,
+          integrations: {},
+          desktopMode: true,
+          desktopLockEnabled: true,
+          desktopUsername: 'my-space',
+        },
+      })
+
+    beforeEach(() => {
+      helloAvailable.mockReset()
+      helloUnlock.mockReset()
+      helloAvailable.mockResolvedValue(false)
+    })
+
+    it('offers Hello inside the shell when the lock is on and Hello answers', async () => {
+      Object.defineProperty(window, 'isTauri', { value: true, configurable: true })
+      try {
+        useSsoInfo.mockReturnValue(SSO_DISABLED)
+        lockedDesktop()
+        helloAvailable.mockResolvedValue(true)
+
+        renderLogin('/login')
+
+        expect(await screen.findByRole('button', { name: en.desktop.hello.button })).toBeInTheDocument()
+        // The password form stays: Hello is an alternative, not a replacement.
+        expect(screen.getByLabelText('Username')).toBeInTheDocument()
+      } finally {
+        delete (window as Window & { isTauri?: boolean }).isTauri
+      }
+    })
+
+    it('stays hidden outside the shell without asking it', () => {
+      useSsoInfo.mockReturnValue(SSO_DISABLED)
+      lockedDesktop()
+
+      renderLogin('/login')
+
+      expect(screen.queryByRole('button', { name: en.desktop.hello.button })).not.toBeInTheDocument()
+      expect(helloAvailable).not.toHaveBeenCalled()
+    })
+
+    it('stays hidden when the lock is off or Hello is unavailable', async () => {
+      Object.defineProperty(window, 'isTauri', { value: true, configurable: true })
+      try {
+        useSsoInfo.mockReturnValue(SSO_DISABLED)
+        useSetupStatus.mockReturnValue({
+          data: {
+            state: 'COMPLETE',
+            needsSetup: false,
+            integrations: {},
+            desktopMode: true,
+            desktopLockEnabled: false,
+          },
+        })
+
+        renderLogin('/login')
+
+        expect(screen.queryByRole('button', { name: en.desktop.hello.button })).not.toBeInTheDocument()
+      } finally {
+        delete (window as Window & { isTauri?: boolean }).isTauri
+      }
+    })
+
+    it('unlocks through the shell without an error banner', async () => {
+      Object.defineProperty(window, 'isTauri', { value: true, configurable: true })
+      try {
+        useSsoInfo.mockReturnValue(SSO_DISABLED)
+        lockedDesktop()
+        helloAvailable.mockResolvedValue(true)
+        helloUnlock.mockResolvedValue(undefined)
+
+        renderLogin('/login')
+
+        fireEvent.click(await screen.findByRole('button', { name: en.desktop.hello.button }))
+        await waitFor(() => expect(helloUnlock).toHaveBeenCalled())
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      } finally {
+        delete (window as Window & { isTauri?: boolean }).isTauri
+      }
+    })
+
+    it('stays silent when the person closes the Hello prompt', async () => {
+      Object.defineProperty(window, 'isTauri', { value: true, configurable: true })
+      try {
+        useSsoInfo.mockReturnValue(SSO_DISABLED)
+        lockedDesktop()
+        helloAvailable.mockResolvedValue(true)
+        helloUnlock.mockRejectedValue('cancelled')
+
+        renderLogin('/login')
+
+        fireEvent.click(await screen.findByRole('button', { name: en.desktop.hello.button }))
+        await waitFor(() => expect(helloUnlock).toHaveBeenCalled())
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      } finally {
+        delete (window as Window & { isTauri?: boolean }).isTauri
+      }
+    })
+
+    it('shows an error banner when the Hello unlock fails', async () => {
+      Object.defineProperty(window, 'isTauri', { value: true, configurable: true })
+      try {
+        useSsoInfo.mockReturnValue(SSO_DISABLED)
+        lockedDesktop()
+        helloAvailable.mockResolvedValue(true)
+        helloUnlock.mockRejectedValue('the backend refused the hello unlock')
+
+        renderLogin('/login')
+
+        fireEvent.click(await screen.findByRole('button', { name: en.desktop.hello.button }))
+        expect(await screen.findByRole('alert')).toHaveTextContent(en.desktop.hello.error)
       } finally {
         delete (window as Window & { isTauri?: boolean }).isTauri
       }

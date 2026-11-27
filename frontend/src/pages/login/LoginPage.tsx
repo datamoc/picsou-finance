@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
+import { HELLO_CANCELLED, helloAvailable, helloUnlock } from '@/features/desktop/hello'
 import { isInsideDesktopShell } from '@/features/desktop/shell'
 import { useLoginWithRememberMe } from '@/features/mfa/hooks'
 import { useSetupStatus } from '@/features/setup/hooks'
@@ -28,6 +29,8 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [showPw, setShowPw] = useState(false)
+  const [helloOffered, setHelloOffered] = useState(false)
+  const [helloPending, setHelloPending] = useState(false)
   const [error, setError] = useState<string | null>(() => {
     const ssoError = searchParams.get('ssoError')
     return ssoError ? ssoErrorMessage(t, ssoError) : null
@@ -75,6 +78,31 @@ export function LoginPage() {
   const handleSsoClick = () => {
     rememberSsoPreference(rememberMe)
     startSso(rememberMe)
+  }
+
+  // Inside the desktop app with the password lock on, Windows Hello is a second way in.
+  // The shell verifies the person and walks the window through; a closed prompt stays silent.
+  useEffect(() => {
+    if (!desktopMode || !desktopLockEnabled || !insideDesktopShell || demoMode) return
+    let live = true
+    void helloAvailable().then(offered => {
+      if (live) setHelloOffered(offered)
+    })
+    return () => {
+      live = false
+    }
+  }, [desktopMode, desktopLockEnabled, insideDesktopShell, demoMode])
+
+  const handleHelloClick = async () => {
+    setError(null)
+    setHelloPending(true)
+    try {
+      await helloUnlock()
+    } catch (err: unknown) {
+      if (err !== HELLO_CANCELLED) setError(t('desktop.hello.error'))
+    } finally {
+      setHelloPending(false)
+    }
   }
 
   // After an SSO_REVALIDATE refusal, restart the IdP round trip without a click. The one-shot
@@ -197,6 +225,29 @@ export function LoginPage() {
                 >
                   <Key className="size-4" aria-hidden="true" />
                   {t('auth.sso.button', { provider: sso.providerName })}
+                </Button>
+                <div className="my-5 flex items-center gap-3">
+                  <Separator className="h-px flex-1" />
+                  <span className="text-xs text-muted-foreground">{t('auth.sso.or')}</span>
+                  <Separator className="h-px flex-1" />
+                </div>
+              </>
+            )}
+            {helloOffered && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleHelloClick}
+                  disabled={helloPending}
+                  className="h-auto min-h-10 w-full whitespace-normal rounded-lg px-4 py-2.5 text-sm font-medium"
+                >
+                  {helloPending ? (
+                    <CircleNotch className="size-4 animate-spin" />
+                  ) : (
+                    <Key className="size-4" aria-hidden="true" />
+                  )}
+                  {helloPending ? t('auth.loggingIn') : t('desktop.hello.button')}
                 </Button>
                 <div className="my-5 flex items-center gap-3">
                   <Separator className="h-px flex-1" />

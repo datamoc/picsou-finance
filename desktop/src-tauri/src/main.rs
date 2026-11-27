@@ -3,6 +3,7 @@
 
 mod enable_banking;
 mod external;
+mod hello;
 mod i18n;
 mod passkey;
 mod sidecars;
@@ -228,6 +229,7 @@ fn main() {
             Some(vec![HIDDEN]),
         ))
         .manage(stack.clone())
+        .manage(hello::BackendTarget::default())
         .manage(update::TrayItem::default())
         .manage(update::UpdateState::default())
         .manage(enable_banking::ActiveAuthWindow::default())
@@ -248,6 +250,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             restore_backup,
             enable_banking::open_enable_banking_auth,
+            hello::hello_available,
+            hello::hello_unlock,
             update::get_desktop_update_status,
             update::check_desktop_update,
             update::install_desktop_update,
@@ -293,10 +297,12 @@ fn main() {
                 update::start_renderer(app.handle());
             }
             let stack = handle.state::<Shared>().inner().clone();
+            let hello_target = handle.state::<hello::BackendTarget>().shared();
             // The window shows ui/index.html while the embedded SQLite backend starts, then the app.
             std::thread::spawn(move || {
                 match supervisor::start(&layout, &stack, Some(handle.clone())) {
                     Ok(ready) => {
+                        hello_target.set(ready.port, &ready.desktop_token);
                         match (handle.get_webview_window("main"), Url::parse(&ready.url)) {
                             (Some(window), Ok(url)) => {
                                 let _ = window.navigate(url);

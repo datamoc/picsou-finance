@@ -27,3 +27,13 @@ commands.allow = ["open_enable_banking_auth"]
 identifier = "allow-passkey-prompt"
 description = "Allows the bundled passkey window to read its step and send the person's answer."
 commands.allow = ["passkey_view", "passkey_answer"]
+
+[[permission]]
+identifier = "allow-hello-available"
+description = "Allows the desktop app window to check whether Windows Hello is available."
+commands.allow = ["hello_available"]
+
+[[permission]]
+identifier = "allow-hello-unlock"
+description = "Allows the desktop app window to unlock through Windows Hello."
+commands.allow = ["hello_unlock"]

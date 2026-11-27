@@ -30,6 +30,8 @@ const FRAMEWORK_ROUTES: &[(&str, &str)] = &[
     ("POST", "/api/setup/desktop-quick-start"),
     ("GET", "/api/auth/desktop-bootstrap"),
     ("POST", "/api/auth/desktop-autologin"),
+    ("POST", "/api/auth/desktop-hello-unlock"),
+    ("GET", "/api/auth/desktop-hello-bootstrap"),
     ("GET", "/api/desktop/lock"),
     ("PUT", "/api/desktop/lock"),
     // Desktop-only interactive WebView bank connector endpoints (additive, not in Java).

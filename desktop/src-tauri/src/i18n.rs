@@ -140,6 +140,30 @@ const BACKUP_FAILED: Texts = [
     "Picsou konnte deine Daten vor dem Update nicht kopieren und wurde deshalb nicht gestartet: {error}",
 ];
 
+/// The message Windows Hello shows when the desktop lock asks for consent.
+const HELLO_PROMPT: Texts = [
+    "Unlock Picsou",
+    "Déverrouiller Picsou",
+    "Desbloquear Picsou",
+    "Picsou entsperren",
+];
+
+/// Windows Hello is missing, off, or refused the app; the password still works.
+const HELLO_UNAVAILABLE: Texts = [
+    "Windows Hello is not available; sign in with your password instead.",
+    "Windows Hello n'est pas disponible ; connectez-vous avec votre mot de passe.",
+    "Windows Hello no está disponible; inicie sesión con su contraseña.",
+    "Windows Hello ist nicht verfügbar; melden Sie sich stattdessen mit Ihrem Passwort an.",
+];
+
+pub fn hello_prompt(lang: Lang) -> &'static str {
+    lang.pick(HELLO_PROMPT)
+}
+
+pub fn hello_unavailable(lang: Lang) -> &'static str {
+    lang.pick(HELLO_UNAVAILABLE)
+}
+
 pub fn tray_open(lang: Lang) -> &'static str {
     lang.pick(TRAY_OPEN)
 }

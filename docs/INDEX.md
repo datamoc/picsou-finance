@@ -105,6 +105,7 @@
 | 2026-11-25 | [How Picsou names a fund the provider does not identify](./decisions/2026-11-25-tracked-fund-isin.md) | Active |
 | 2026-11-25 | [Natixis passkey sign-in through the desktop shell's Windows prompt](./decisions/2026-11-25-natixis-passkey-on-desktop.md) | Proposed |
 | 2026-11-26 | [Passkey sign-in with a USB security key on Linux](./decisions/2026-11-26-passkey-security-keys-on-linux.md) | Proposed |
+| 2026-11-27 | [Install secrets in the OS credential store](./decisions/2026-11-27-os-keystore.md) | Proposed |
 
 ## Feature notes
 
@@ -210,6 +211,8 @@
 | Revolut pockets (reconstruction from PSD2 internal-transfer rows) (removed, 2026-07-14) | 2026-06-28 | [revolut-pockets.md](./features/revolut-pockets.md) |
 | Revolut sidecar (assisted-enrolment login connector) | 2026-10-31 | [revolut-sidecar.md](./features/revolut-sidecar.md) |
 | Dividend forecast (shares, ETFs, SCPI) as upcoming capital income | 2026-11-05 | [dividend-forecast.md](./features/dividend-forecast.md) |
+| Install secrets in the OS credential store (DPAPI / Secret Service) | 2026-11-27 | [os-keystore.md](./features/os-keystore.md) |
+| Windows Hello unlock for the desktop password lock | 2026-11-27 | [desktop-hello-unlock.md](./features/desktop-hello-unlock.md) |
 
 ## Lessons
 
