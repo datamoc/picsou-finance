@@ -1503,6 +1503,9 @@ handlers.set(key('POST', '/bourso/auth/initiate'), () => ({
   processId: null, mfaRequired: false, mfaType: null,
 }))
 handlers.set(key('POST', '/bourso/auth/complete'), () => demoBoursoStatus)
+// The demo runs in a browser: there is no desktop shell to ask for a passkey.
+handlers.set(key('GET', '/bourso/auth/passkey'), () => ({ available: false }))
+handlers.set(key('POST', '/bourso/auth/passkey'), () => demoBoursoStatus)
 handlers.set(key('POST', '/bourso/sync'), () => demoBoursoStatus)
 handlers.set(key('DELETE', '/bourso/session'), () => null)
 
