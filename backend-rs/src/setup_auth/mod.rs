@@ -19,6 +19,8 @@ pub fn register(routes: &mut Routes) {
         .permit_all(Some(Method::POST), "/api/auth/login")
         .permit_all(Some(Method::GET), "/api/auth/desktop-bootstrap")
         .permit_all(Some(Method::POST), "/api/auth/desktop-autologin")
+        .permit_all(Some(Method::POST), "/api/auth/desktop-hello-unlock")
+        .permit_all(Some(Method::GET), "/api/auth/desktop-hello-bootstrap")
         .permit_all(Some(Method::POST), "/api/auth/refresh")
         .permit_all(Some(Method::POST), "/api/auth/logout")
         .permit_all(Some(Method::POST), "/api/auth/mfa/verify")
@@ -63,6 +65,11 @@ pub fn register(routes: &mut Routes) {
         .post("/api/auth/login", auth::login)
         .get("/api/auth/desktop-bootstrap", desktop::bootstrap)
         .post("/api/auth/desktop-autologin", desktop::autologin)
+        .post("/api/auth/desktop-hello-unlock", desktop::hello_unlock)
+        .get(
+            "/api/auth/desktop-hello-bootstrap",
+            desktop::hello_bootstrap,
+        )
         .post("/api/auth/mfa/verify", auth::mfa_verify)
         .post("/api/auth/refresh", auth::refresh)
         .post("/api/auth/logout", auth::logout)

@@ -209,6 +209,7 @@
 | Revolut sidecar (assisted-enrolment login connector) | 2026-10-31 | [revolut-sidecar.md](./features/revolut-sidecar.md) |
 | Dividend forecast (shares, ETFs, SCPI) as upcoming capital income | 2026-11-05 | [dividend-forecast.md](./features/dividend-forecast.md) |
 | Install secrets in the OS credential store (DPAPI / Secret Service) | 2026-11-27 | [os-keystore.md](./features/os-keystore.md) |
+| Windows Hello unlock for the desktop password lock | 2026-11-27 | [desktop-hello-unlock.md](./features/desktop-hello-unlock.md) |
 
 ## Lessons
 

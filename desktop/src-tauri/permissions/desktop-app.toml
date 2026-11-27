@@ -22,3 +22,13 @@ commands.allow = ["install_desktop_update"]
 identifier = "allow-open-enable-banking-auth"
 description = "Allows the desktop app window to open an Enable Banking authorization window."
 commands.allow = ["open_enable_banking_auth"]
+
+[[permission]]
+identifier = "allow-hello-available"
+description = "Allows the desktop app window to check whether Windows Hello is available."
+commands.allow = ["hello_available"]
+
+[[permission]]
+identifier = "allow-hello-unlock"
+description = "Allows the desktop app window to unlock through Windows Hello."
+commands.allow = ["hello_unlock"]

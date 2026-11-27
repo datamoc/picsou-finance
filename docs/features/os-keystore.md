@@ -77,5 +77,5 @@ backend start → secrets::bootstrap
 
 - Related ADR: [2026-11-27-os-keystore](../decisions/2026-11-27-os-keystore.md)
 - Follows: [2026-04-08-mandatory-encryption-key](../decisions/2026-04-08-mandatory-encryption-key.md)
-- Next step: Windows Hello / Linux prompt as the interactive unlock gate, on
-  top of this store.
+- Interactive gate on top of this store: Windows Hello is done
+  ([desktop-hello-unlock.md](./desktop-hello-unlock.md)); the Linux prompt is deferred.

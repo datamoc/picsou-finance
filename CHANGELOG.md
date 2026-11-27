@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   environment) refuses to start without the store and never writes plaintext. Docker and Helm
   installs are unchanged. Server operators can set either mode explicitly.
 
+- **Windows Hello unlock for the desktop password lock.** Inside Picsou Desktop on Windows,
+  the login page offers unlocking with Windows Hello when Hello is available: the system
+  prompt verifies the person, then the shell redeems a single-use, two-minute code for a
+  normal session — the same cookies and the same `desktop.hello.unlocked` audit event as a
+  password login. The password stays as an alternative, Hello never bypasses two-factor,
+  and page scripts cannot mint codes (issuance requires the shell's launch token, not
+  the gate cookie). Linux keeps the password for now.
+
 - **Explainable and actionable unclassified diversification amounts.** In Analysis → Diversification,
   the overall "unclassified" badge and each dimension's (Sectors, Regions) unclassified badge are
   now buttons that open a breakdown dialog listing every contributing position (including funds

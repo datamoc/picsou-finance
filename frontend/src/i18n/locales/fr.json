@@ -3827,6 +3827,10 @@
       "title": "Ouverture de session impossible",
       "description": "Picsou n'a pas pu ouvrir votre session automatiquement. Quittez Picsou depuis son icône (barre des menus ou zone de notification), puis relancez-le."
     },
+    "hello": {
+      "button": "Continuer avec Windows Hello",
+      "error": "Le déverrouillage avec Windows Hello a échoué. Réessayez ou connectez-vous avec votre mot de passe."
+    },
     "update": {
       "bannerTitle": "Picsou {{version}} est disponible",
       "install": "Installer",

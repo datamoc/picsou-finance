@@ -3827,6 +3827,10 @@
       "title": "Anmeldung nicht möglich",
       "description": "Picsou konnte deine Sitzung nicht automatisch öffnen. Beende Picsou über sein Symbol im Infobereich und starte es erneut."
     },
+    "hello": {
+      "button": "Mit Windows Hello fortfahren",
+      "error": "Die Entsperrung mit Windows Hello ist fehlgeschlagen. Versuche es erneut oder melde dich mit deinem Passwort an."
+    },
     "update": {
       "bannerTitle": "Picsou {{version}} ist verfügbar",
       "install": "Installieren",

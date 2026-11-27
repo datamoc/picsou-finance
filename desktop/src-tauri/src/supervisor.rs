@@ -211,6 +211,8 @@ pub fn let_the_installer_outlive_the_app() {
 /// The backend, started and ready to serve: the window can load `url` now.
 pub struct Ready {
     pub url: String,
+    pub port: u16,
+    pub desktop_token: String,
     runtime: tokio::runtime::Runtime,
     state: picsou::AppState,
     listener: TcpListener,
@@ -371,6 +373,8 @@ pub fn start(
     sidecars::prefetch_browser(layout, stack);
     Ok(Ready {
         url: format!("http://{LOOPBACK}:{port}/api/auth/desktop-bootstrap?token={desktop_token}"),
+        port,
+        desktop_token,
         runtime,
         state,
         listener,

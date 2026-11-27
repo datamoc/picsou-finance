@@ -3827,6 +3827,10 @@
       "title": "No se ha podido iniciar sesión",
       "description": "Picsou no ha podido abrir tu sesión automáticamente. Sal de Picsou desde su icono en la bandeja del sistema y vuelve a abrirlo."
     },
+    "hello": {
+      "button": "Continuar con Windows Hello",
+      "error": "El desbloqueo con Windows Hello ha fallado. Inténtalo de nuevo o inicia sesión con tu contraseña."
+    },
     "update": {
       "bannerTitle": "Picsou {{version}} está disponible",
       "install": "Instalar",

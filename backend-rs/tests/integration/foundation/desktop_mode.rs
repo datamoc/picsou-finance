@@ -1367,3 +1367,132 @@ async fn update_lock_rolls_back_password_and_sessions_when_setting_write_fails()
     assert_eq!(ok.status, StatusCode::OK);
     assert_eq!(ok.json()["enabled"], true);
 }
+
+#[tokio::test]
+async fn windows_hello_unlock_issues_a_single_use_session() {
+    let app = TestApp::builder()
+        .env("APP_DESKTOP_MODE", "true")
+        .spawn()
+        .await;
+
+    // Bootstrap the WebView first: it holds the gate cookie but no launch token header.
+    let webview = app.client();
+    let token = app.desktop_token().expect("desktop token").to_owned();
+    let boot = webview
+        .get(&format!("/api/auth/desktop-bootstrap?token={token}"))
+        .send()
+        .await;
+    assert_eq!(boot.status, StatusCode::SEE_OTHER);
+
+    // Quick-start, then lock the desktop with a password.
+    let qs = webview
+        .post("/api/setup/desktop-quick-start")
+        .json(&json!({"displayName": "Camille"}))
+        .send()
+        .await;
+    assert_eq!(qs.status, StatusCode::OK);
+    let enable = webview
+        .put("/api/desktop/lock")
+        .json(&json!({"enabled": true, "newPassword": "my-strong-password"}))
+        .send()
+        .await;
+    assert_eq!(enable.status, StatusCode::OK);
+    // The WebView's session cookies are gone, the gate cookie stays: a page script's view.
+    webview.remove_cookie("access_token");
+    webview.remove_cookie("refresh_token");
+
+    // 1. A page script holding only the gate cookie is refused: only the shell's launch
+    // token header issues unlock codes.
+    assert_eq!(
+        webview
+            .post("/api/auth/desktop-hello-unlock")
+            .send()
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
+
+    // 2. The shell (launch token header) gets a single-use code.
+    let shell = app.desktop_client();
+    let issue = shell.post("/api/auth/desktop-hello-unlock").send().await;
+    assert_eq!(issue.status, StatusCode::OK);
+    let code = issue.json()["code"]
+        .as_str()
+        .expect("unlock code")
+        .to_owned();
+
+    // 3. Without the lock, there is nothing to unlock this way: neither issuance...
+    let admin = app.login("camille", "my-strong-password").await;
+    assert_eq!(
+        admin
+            .put("/api/desktop/lock")
+            .json(&json!({"enabled": false, "currentPassword": "my-strong-password"}))
+            .send()
+            .await
+            .status,
+        StatusCode::OK
+    );
+    let no_lock = shell.post("/api/auth/desktop-hello-unlock").send().await;
+    assert_eq!(no_lock.status, StatusCode::FORBIDDEN);
+    assert_eq!(no_lock.json()["code"], "DESKTOP_LOCK_DISABLED");
+    // ...nor redemption of a code issued while the lock was on.
+    let stale = app
+        .client()
+        .get(&format!("/api/auth/desktop-hello-bootstrap?token={code}"))
+        .send()
+        .await;
+    assert_eq!(stale.status, StatusCode::FORBIDDEN);
+    assert_eq!(stale.json()["code"], "DESKTOP_LOCK_DISABLED");
+    // Re-lock, then issue the code that the redemption below consumes.
+    let relock = admin
+        .put("/api/desktop/lock")
+        .json(&json!({"enabled": true, "newPassword": "my-strong-password"}))
+        .send()
+        .await;
+    assert_eq!(relock.status, StatusCode::OK);
+    let issue = shell.post("/api/auth/desktop-hello-unlock").send().await;
+    assert_eq!(issue.status, StatusCode::OK);
+    let code = issue.json()["code"]
+        .as_str()
+        .expect("unlock code")
+        .to_owned();
+
+    // 4. The code redeems into a working session with a bootstrap-like redirect.
+    let fresh = app.client();
+    let redeem = fresh
+        .get(&format!("/api/auth/desktop-hello-bootstrap?token={code}"))
+        .send()
+        .await;
+    assert_eq!(redeem.status, StatusCode::SEE_OTHER);
+    assert_eq!(redeem.header("location"), Some("/"));
+    let names: Vec<String> = redeem
+        .set_cookies()
+        .iter()
+        .map(|c| c.split('=').next().unwrap_or("").to_owned())
+        .collect();
+    for expected in ["access_token", "refresh_token", "picsou_desktop_gate"] {
+        assert!(names.contains(&expected.to_owned()), "{names:?}");
+    }
+    assert_eq!(
+        fresh.get("/api/accounts").send().await.status,
+        StatusCode::OK
+    );
+
+    // 5. The same code is dead now, and unknown codes never worked.
+    assert_eq!(
+        app.client()
+            .get(&format!("/api/auth/desktop-hello-bootstrap?token={code}"))
+            .send()
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        app.client()
+            .get("/api/auth/desktop-hello-bootstrap?token=not-a-code")
+            .send()
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
+}
