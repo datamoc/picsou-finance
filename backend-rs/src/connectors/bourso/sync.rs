@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 
-use crate::db::DbHandle;
+use crate::db::{AsDbHandle, DbHandle};
 use async_trait::async_trait;
 use chrono::{DateTime, TimeDelta, Utc};
 use regex::Regex;
@@ -15,6 +15,7 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::AppState;
+use crate::connectors::sidecar::flow::non_blank;
 use crate::connectors::sidecar::pending::{Pending, PendingLogins};
 use crate::connectors::sidecar::session;
 use crate::connectors::sidecar::template::error;
@@ -363,6 +364,37 @@ pub async fn complete_auth(
     .await
 }
 
+pub async fn passkey_auth(
+    state: &AppState,
+    customer_id: &str,
+    member_id: i64,
+) -> AppResult<SessionStatusResponse> {
+    let logins = pending(state);
+    let generation = logins.generation(member_id);
+    let response: SidecarSessionState = client(state)
+        .post(
+            "/passkey",
+            &json!({"customerId": customer_id}),
+            Duration::from_secs(230),
+            "Could not sign in to BoursoBank with a passkey",
+            Some(SidecarErrorCode::InvalidCredentials),
+        )
+        .await?;
+    let plain = non_blank(
+        response.session_state,
+        "BoursoBank did not return a session",
+    )?;
+    let _guard = logins.write_lock().await;
+    if logins.generation(member_id) != generation {
+        return Err(error(
+            SidecarErrorCode::AuthAttemptExpired,
+            "BoursoBank connection was removed during login",
+        )
+        .into());
+    }
+    store_session_and_queue(state, plain, member_id, None).await
+}
+
 pub async fn queue_sync(state: &AppState, member_id: i64) -> AppResult<SessionStatusResponse> {
     Ok(SessionStatusResponse::of(
         &template().queue(state, member_id, false).await?,
@@ -382,13 +414,51 @@ async fn store_session_and_queue(
                 .encrypt(&serialize_credentials(customer_id, password))
         })
         .transpose()?;
-    let session = template()
-        .replace_and_queue(state, member_id, plain_state, false, |session| {
-            session.encrypted_credentials = encrypted;
-            Ok(())
-        })
+    let template = template();
+    let mut tx = state.db.begin().await?;
+    let job = template
+        .insert_queued(
+            state,
+            &mut tx.as_handle(),
+            member_id,
+            plain_state,
+            false,
+            |session| {
+                session.encrypted_credentials = encrypted;
+                Ok(())
+            },
+        )
         .await?;
-    Ok(SessionStatusResponse::of(&session))
+    // After the session row, the order the sync commit locks them in.
+    restore_deleted_accounts(&mut tx.as_handle(), member_id).await?;
+    tx.commit().await?;
+    // Read before the job starts, so the caller never races with it.
+    let status = get_status(state, member_id).await?;
+    template.submit(state, job)?;
+    Ok(status)
+}
+
+/// The member signed in on purpose: the BoursoBank accounts they had deleted come back with this
+/// login's import, while a routine sync, an automatic re-login included, still skips them. One
+/// whose IBAN a live account holds stays deleted, or the same money would count twice.
+async fn restore_deleted_accounts(conn: &mut DbHandle<'_>, member_id: i64) -> AppResult<()> {
+    let held_elsewhere: Vec<String> = crate::db::query_scalar(
+        "SELECT gone.external_account_id FROM account gone \
+         WHERE gone.member_id = $1 AND gone.deleted_at IS NOT NULL \
+         AND gone.external_account_id IS NOT NULL AND EXISTS (SELECT 1 FROM account live \
+         WHERE live.member_id = gone.member_id AND live.iban = gone.iban \
+         AND live.deleted_at IS NULL)",
+    )
+    .bind(member_id)
+    .fetch_all(&mut *conn)
+    .await?;
+    accounts::restore_soft_deleted_by_provider_excluding(conn, member_id, PROVIDER, |id| {
+        !id.is_some_and(|id| {
+            id.starts_with(EXTERNAL_ID_PREFIX) && !held_elsewhere.iter().any(|held| held == id)
+        })
+    })
+    .await?;
+    Ok(())
 }
 
 pub async fn get_status(state: &AppState, member_id: i64) -> AppResult<SessionStatusResponse> {
@@ -403,11 +473,10 @@ pub async fn get_status(state: &AppState, member_id: i64) -> AppResult<SessionSt
 /// Whether a stored session was there to delete. A pending login is dropped too but does not
 /// count: it never became a connection.
 pub async fn clear_session(state: &AppState, member_id: i64) -> AppResult<bool> {
-    let removed = template().clear(state, member_id).await?;
     let logins = pending(state);
-    for process_id in logins.member_process_ids(member_id) {
-        logins.remove(&process_id);
-    }
+    let _guard = logins.write_lock().await;
+    logins.forget_member(member_id);
+    let removed = template().clear(state, member_id).await?;
     Ok(removed)
 }
 

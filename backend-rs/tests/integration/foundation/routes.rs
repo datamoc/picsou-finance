@@ -47,6 +47,9 @@ const FRAMEWORK_ROUTES: &[(&str, &str)] = &[
     // Natixis passkey sign-in through the desktop shell.
     ("GET", "/api/natixis/auth/passkey"),
     ("POST", "/api/natixis/auth/passkey"),
+    // BoursoBank passkey sign-in through the desktop shell.
+    ("GET", "/api/bourso/auth/passkey"),
+    ("POST", "/api/bourso/auth/passkey"),
 ];
 
 /// Spring and axum share the {name} syntax; a regex constraint ({id:\d+}) and the variable name

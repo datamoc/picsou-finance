@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   Warning,
   Bank,
@@ -21,6 +22,8 @@ import {
   useProviderStatus,
   useProviderSync,
 } from "@/features/sync/hooks"
+import { boursoApi } from "@/features/sync/api"
+import { syncKeys } from "@/features/sync/keys"
 import { useConnectorError } from "@/features/sync/use-connector-error"
 import { extractTypedErrorCode } from "@/lib/connector-report"
 import { extractErrorMessage, getErrorCode, getErrorStatus } from "@/lib/errors"
@@ -51,6 +54,24 @@ export function BoursoPanel({ onConnected }: BoursoPanelProps = {}) {
   const sync = useProviderSync("bourso")
   const logout = useProviderClear("bourso")
   const { mutate: completeMutate } = complete
+  const { data: passkey } = useQuery({
+    queryKey: syncKeys.boursoPasskey(),
+    queryFn: boursoApi.getPasskeyAvailability,
+    staleTime: Infinity,
+  })
+  const passkeyLogin = useMutation({
+    mutationFn: boursoApi.connectWithPasskey,
+    onSuccess: () => {
+      notifyConnectedOnSuccess.current = true
+      setCustomerId("")
+      setPassword("")
+      void status.refetch()
+    },
+    onError: (value) => {
+      setError(t("sync.bourso.passkeyFailed"), extractTypedErrorCode(value))
+      setAuthState("ERROR")
+    },
+  })
 
   const messageForCode = (value: BoursoErrorCode | string | null | undefined) => {
     switch (value) {
@@ -319,7 +340,20 @@ export function BoursoPanel({ onConnected }: BoursoPanelProps = {}) {
                   required
                 />
               </div>
-              <Button type="submit" disabled={initiate.isPending}>
+              {passkey?.available && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={passkeyLogin.isPending || initiate.isPending || customerId.length !== 8}
+                  onClick={() => {
+                    setError(null)
+                    passkeyLogin.mutate(customerId)
+                  }}
+                >
+                  {t(passkeyLogin.isPending ? "sync.bourso.passkeyWaiting" : "sync.bourso.passkeyConnect")}
+                </Button>
+              )}
+              <Button type="submit" disabled={initiate.isPending || passkeyLogin.isPending}>
                 {initiate.isPending && <ArrowsClockwise className="animate-spin" />}
                 {initiate.isPending
                   ? t("sync.bourso.connecting")

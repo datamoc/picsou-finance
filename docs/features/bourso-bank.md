@@ -115,6 +115,12 @@ arrives. Deleting one copy settles it, whichever is deleted: the deleted copy is
 not resurrected. If Enable Banking later rotates the account's uid, the new uid is
 not a deleted one, so that connection can still match the surviving row by IBAN.
 
+**A new sign-in brings deleted accounts back; a sync does not.** Signing in (password, app
+confirmation or passkey) undeletes the member's synced BoursoBank accounts (`bourso_` ids) in the
+transaction that stores the session. A routine sync, an automatic re-login included, leaves them
+deleted. An account whose IBAN a live account holds stays deleted, so the same money is not counted
+twice; a deleted copy with no stored IBAN cannot be recognised that way and comes back.
+
 `SharedSidecarTransactionImportService` is reused by Bourso and Revolut. It
 checks the existing transaction IDs and the bounded provider-prefixed V88 key.
 Legacy overlap is a strict multiset comparison of date, signed amount and
@@ -175,6 +181,10 @@ to execute. That keeps this sidecar a tenth the size of the Playwright ones.
    `INVALID_CREDENTIALS`.
 5. `GET /` — `href="/se-deconnecter"` means signed in, `/securisation` means a
    second factor.
+
+#### Desktop passkey sign-in
+
+Picsou Desktop on Windows or Linux can sign in with an existing BoursoBank passkey or FIDO2 key. Enter the eight-digit customer number and choose the passkey button. The bank supplies a challenge for `boursobank.com`; the desktop bridge signs it with the origin `https://clients.boursobank.com`, validates the assertion with the bank, and stores the resulting session as for a password login. The bridge is available only to the native connector on desktop. Windows uses its WebAuthn prompt; Linux supports USB security keys. No password or private key is stored for this login, so an expired session requires another interactive sign-in. The flow is based on the BoursoBank connector in wealthfolio-convergence and has not yet been validated against a live account in Picsou.
 
 #### The second factor is app-push only
 

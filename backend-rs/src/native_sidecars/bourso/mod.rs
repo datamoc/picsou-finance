@@ -6,6 +6,7 @@
 pub mod accounts_parser;
 pub mod cookies;
 pub mod html;
+mod passkey;
 pub mod virtual_pad;
 
 use std::collections::{HashMap, HashSet};
@@ -94,6 +95,9 @@ static HREF_DOUBLE_RE: LazyLock<Regex> =
 static HREF_SINGLE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)href\s*=\s*'([^']+)'").unwrap());
 static CURRENCY_CODE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[A-Z]{3}$").unwrap());
+/// The tag that carries the login page's process id.
+static UUID_META_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)<meta\b[^>]*\bname\s*=\s*["']uuid["']"#).unwrap());
 static SAFE_PATH_SEGMENT_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[A-Za-z0-9_-]{1,128}$").unwrap());
 
@@ -109,6 +113,7 @@ pub struct BoursoConfig {
     pub pending_ttl: Duration,
     pub max_pending: usize,
     pub today_override: Option<NaiveDate>,
+    pub passkey_bridge: Option<crate::native_sidecars::natixis::PasskeyBridge>,
 }
 
 impl Default for BoursoConfig {
@@ -123,6 +128,7 @@ impl Default for BoursoConfig {
             pending_ttl: Duration::from_secs(PENDING_TTL_SECONDS),
             max_pending: MAX_PENDING,
             today_override: None,
+            passkey_bridge: None,
         }
     }
 }
@@ -744,6 +750,7 @@ impl NativeBourso {
                 })?;
                 Ok(NativeResponse::ok(value))
             }
+            (Method::POST, "/passkey") => self.handle_passkey(body).await,
             (Method::POST, "/complete") => {
                 let req = parse_complete_request(body)?;
                 let resp = self.complete(req).await?;
@@ -760,7 +767,7 @@ impl NativeBourso {
                 })?;
                 Ok(NativeResponse::ok(value))
             }
-            (_, "/health" | "/initiate" | "/complete" | "/accounts") => {
+            (_, "/health" | "/initiate" | "/passkey" | "/complete" | "/accounts") => {
                 let (status, detail) = method_not_allowed(&method);
                 Err(NativeError::new(status, detail))
             }
@@ -896,7 +903,7 @@ impl NativeBourso {
     async fn bootstrap(&self, session: &SessionClient) -> Result<String, NativeError> {
         let response = session.get(LOGIN_PATH, false).await?;
         let body = read_text(response).await?;
-        if body.contains(LOGGED_IN_MARKER) {
+        if body.contains(LOGGED_IN_MARKER) || UUID_META_RE.is_match(&body) {
             return Ok(body);
         }
 

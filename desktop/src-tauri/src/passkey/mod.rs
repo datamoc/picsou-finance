@@ -23,8 +23,8 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 
-/// The relying parties Picsou signs for; the signed origin is `https://<rp id>`.
-const ALLOWED_RP_IDS: &[&str] = &["auth-nie.natixis.com"];
+/// The relying parties Picsou signs for; each has a fixed, bank-owned origin.
+const ALLOWED_RP_IDS: &[&str] = &["auth-nie.natixis.com", "boursobank.com"];
 
 const MIN_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_TIMEOUT: Duration = Duration::from_secs(120);
@@ -226,7 +226,13 @@ fn prepare(request: AssertionRequest) -> Result<Prompt, Refusal> {
         .clamp(MIN_TIMEOUT, MAX_TIMEOUT);
     Ok(Prompt {
         rp_id,
-        client_data_json: client_data_json(rp_id, &challenge),
+        client_data_json: client_data_json(
+            match rp_id {
+                "boursobank.com" => "clients.boursobank.com",
+                _ => rp_id,
+            },
+            &challenge,
+        ),
         allow_credentials,
         user_verification,
         timeout,
@@ -327,6 +333,19 @@ mod tests {
 
     fn natixis() -> Value {
         json!({ "rpId": "auth-nie.natixis.com", "challenge": "+/8=" })
+    }
+
+    #[test]
+    fn bourso_signs_the_client_origin_with_the_parent_relying_party() {
+        let prompt = prepare(request(
+            json!({"rpId": "boursobank.com", "challenge": "AQ"}),
+        ))
+        .unwrap();
+        assert_eq!(prompt.rp_id, "boursobank.com");
+        assert_eq!(
+            String::from_utf8(prompt.client_data_json).unwrap(),
+            r#"{"type":"webauthn.get","challenge":"AQ","origin":"https://clients.boursobank.com","crossOrigin":false}"#
+        );
     }
 
     #[test]

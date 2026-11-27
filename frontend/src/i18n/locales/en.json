@@ -1756,6 +1756,9 @@
     },
     "bourso": {
       "title": "BoursoBank",
+      "passkeyConnect": "Sign in with a passkey or security key",
+      "passkeyWaiting": "Waiting for your security key…",
+      "passkeyFailed": "Passkey sign-in failed or was not confirmed. Check that your BoursoBank account has a passkey, then try again.",
       "customerId": "Client number",
       "password": "Password",
       "appValidationPrompt": "Open the BoursoBank app and approve the sign-in.",

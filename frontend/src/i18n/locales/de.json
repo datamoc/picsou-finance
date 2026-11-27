@@ -1407,6 +1407,9 @@
     },
     "bourso": {
       "title": "BoursoBank",
+      "passkeyConnect": "Mit Passkey oder Sicherheitsschlüssel anmelden",
+      "passkeyWaiting": "Warten auf den Sicherheitsschlüssel…",
+      "passkeyFailed": "Die Anmeldung mit Passkey ist fehlgeschlagen oder wurde nicht bestätigt. Prüfen Sie den Passkey Ihres BoursoBank-Kontos und versuchen Sie es erneut.",
       "customerId": "Kundennummer",
       "password": "Passwort",
       "appValidationPrompt": "Öffnen Sie die BoursoBank-App und bestätigen Sie die Anmeldung.",

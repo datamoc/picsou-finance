@@ -178,7 +178,14 @@ impl NativeSidecars {
             "natixis-auth",
             Arc::new(natixis::NativeNatixis::with_config(natixis)),
         );
-        registry.register("bourso-auth", Arc::new(bourso::NativeBourso::new()));
+        let bourso = bourso::BoursoConfig {
+            passkey_bridge: natixis::PasskeyBridge::from_config(config),
+            ..Default::default()
+        };
+        registry.register(
+            "bourso-auth",
+            Arc::new(bourso::NativeBourso::with_config(bourso)),
+        );
         registry
     }
 

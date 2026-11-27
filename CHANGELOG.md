@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **BoursoBank:** sign in with an existing passkey or security key in Picsou Desktop on Windows or Linux.
+
 - **Natixis Interépargne: sign in with a passkey (Picsou Desktop for Windows and Linux).** Type
   your e-mail, then confirm with Windows Hello or your security key on Windows, or with a USB
   security key and its PIN on Linux: no password and no code. Picsou uses a passkey you already
@@ -53,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **BoursoBank: reconnecting shows deleted accounts again.** Signing in again restores the
+  BoursoBank accounts you had deleted; a routine sync still leaves them deleted.
 - **Natixis Interépargne: reconnecting shows deleted accounts again.** After a Natixis account
   was deleted, a new sign-in reported a successful sync but showed nothing for it. Signing in
   again now restores the deleted plans; a routine sync still leaves them deleted.

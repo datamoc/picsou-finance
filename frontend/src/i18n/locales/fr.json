@@ -1756,6 +1756,9 @@
     },
     "bourso": {
       "title": "BoursoBank",
+      "passkeyConnect": "Se connecter avec une passkey ou une clé de sécurité",
+      "passkeyWaiting": "En attente de votre clé de sécurité…",
+      "passkeyFailed": "Connexion par clé impossible ou non confirmée. Vérifiez que votre compte BoursoBank dispose d’une passkey, puis réessayez.",
       "customerId": "Numéro client",
       "password": "Mot de passe",
       "appValidationPrompt": "Ouvrez l'application BoursoBank et validez la connexion.",

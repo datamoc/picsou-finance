@@ -212,6 +212,14 @@ export const cryptoWalletApi = {
 // --- BoursoBank ---
 
 export const boursoApi = {
+  /** Whether this install can ask for a passkey (Picsou Desktop). */
+  getPasskeyAvailability: () =>
+    api.get<{ available: boolean }>('/bourso/auth/passkey').then(r => r.data),
+  /** Answers once the passkey prompt is confirmed and the first import is queued. */
+  connectWithPasskey: (customerId: string) =>
+    api
+      .post<BoursoSessionStatus>('/bourso/auth/passkey', { customerId }, { timeout: 240_000 })
+      .then(r => r.data),
   initiateAuth: (customerId: string, password: string) =>
     api
       .post<BoursoAuthInitResponse>('/bourso/auth/initiate', { customerId, password })
