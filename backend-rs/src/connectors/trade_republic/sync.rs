@@ -390,7 +390,7 @@ pub async fn complete_auth(
             &mut tx.as_handle(),
             member_id,
             PROVIDER,
-            is_legacy_duplicate_pea_id,
+            |id| id.is_some_and(is_legacy_duplicate_pea_id),
         )
         .await?;
         tx.commit().await?;

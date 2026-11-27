@@ -577,6 +577,37 @@ async fn a_passkey_login_stores_the_session_and_queues_a_sync() {
 }
 
 #[tokio::test]
+async fn a_passkey_login_brings_a_deleted_plan_back() {
+    let (server, _behaviour) = fake_natixis().await;
+    let app = desktop_app(&server, true).await;
+    let client = app.login_admin().await;
+    picsou::db::query(
+        "INSERT INTO account (member_id, name, type, provider, external_account_id, currency, \
+         current_balance, is_manual, color, created_at, updated_at, deleted_at) \
+         SELECT member_id, 'PEE', 'EMPLOYEE_SAVINGS', 'Natixis Interépargne', 'natixis_pee', \
+         'EUR', 7, false, '#8b5cf6', now(), now(), now() FROM app_user WHERE member_id IS NOT NULL",
+    )
+    .execute(&app.state.db)
+    .await
+    .unwrap();
+
+    let response = client
+        .post(PASSKEY_ROUTE)
+        .json(&json!({ "email": EMAIL }))
+        .send()
+        .await;
+
+    assert_eq!(response.status, 200, "{}", response.text());
+    app.state.connectors.jobs.wait_idle().await;
+    let live: i64 =
+        picsou::db::query_scalar("SELECT count(*) FROM account WHERE deleted_at IS NULL")
+            .fetch_one(&app.state.db)
+            .await
+            .expect("count");
+    assert_eq!(live, 1);
+}
+
+#[tokio::test]
 async fn an_install_without_the_prompt_offers_and_runs_no_passkey_login() {
     let (server, behaviour) = fake_natixis().await;
     let without_shell = desktop_app(&server, false).await;

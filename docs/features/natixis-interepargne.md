@@ -241,9 +241,14 @@ spending. The rows stay visible on the account page and in exports.
 - **Ticker scheme:** `NATIXIS-<fundCode>`. Without a code, the ticker is the label slug cut
   to 21 characters, a hyphen, then the first 8 hex characters of the label's SHA-256. Two
   funds whose names start alike therefore never collide.
+- **A new login brings deleted plans back; a sync does not.** A sync skips a plan whose
+  account was deleted. A login is the saver asking for their plans again, so it undeletes
+  their synced Natixis accounts (`natixis_` ids; a manual account naming the same provider
+  stays deleted) in the transaction that stores the session, as Trade Republic does. A plan
+  Natixis no longer lists comes back too, and the import closes it at zero.
 - **Lock order:** the sync commit locks the member's Natixis accounts (by id), then the
   session row. That is the order an account deletion already takes, so the two cannot
-  deadlock.
+  deadlock. A login restores the deleted accounts before it writes the session row.
 - **Interrupted jobs:** at boot, every QUEUED or RUNNING job last updated before this
   backend started is failed as retryable at once. The jobs live in a process-local
   executor, and Helm and Compose run a single backend, so such a job has no worker

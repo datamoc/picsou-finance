@@ -313,6 +313,16 @@ async fn adopt_session(
             .into());
         }
         let mut tx = state.db.begin().await?;
+        // The saver signed in again on purpose: the plans they had deleted come back with this
+        // login's import; a routine sync still skips them. Before the session row is written:
+        // accounts are locked first, as an account deletion does.
+        accounts::restore_soft_deleted_by_provider_excluding(
+            &mut tx.as_handle(),
+            member_id,
+            PROVIDER,
+            |id| !id.is_some_and(|id| id.starts_with(EXTERNAL_ID_PREFIX)),
+        )
+        .await?;
         let job = template()
             .insert_queued(
                 state,
