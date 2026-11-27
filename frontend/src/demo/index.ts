@@ -1433,7 +1433,7 @@ handlers.set(key('POST', '/natixis/auth/initiate'), () => ({
   processId: 'demo-natixis', mfaRequired: true, mfaType: 'SMS',
 }))
 handlers.set(key('POST', '/natixis/auth/complete'), activateDemoNatixis)
-// The demo runs in a browser, which cannot ask the operating system for a passkey.
+// The demo runs in a browser: there is no desktop shell to ask for a passkey.
 handlers.set(key('GET', '/natixis/auth/passkey'), () => ({ available: false }))
 handlers.set(key('POST', '/natixis/auth/passkey'), activateDemoNatixis)
 handlers.set(key('POST', '/natixis/sync'), () => (demoNatixisStatus.isActive ? activateDemoNatixis() : demoNatixisStatus))

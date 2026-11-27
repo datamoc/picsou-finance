@@ -104,6 +104,7 @@
 | 2026-11-24 | [A dependency cache and test shards for the Rust CI jobs](./decisions/2026-11-24-rust-ci-cache-and-shards.md) | Active |
 | 2026-11-25 | [How Picsou names a fund the provider does not identify](./decisions/2026-11-25-tracked-fund-isin.md) | Active |
 | 2026-11-25 | [Natixis passkey sign-in through the desktop shell's Windows prompt](./decisions/2026-11-25-natixis-passkey-on-desktop.md) | Proposed |
+| 2026-11-26 | [Passkey sign-in with a USB security key on Linux](./decisions/2026-11-26-passkey-security-keys-on-linux.md) | Proposed |
 
 ## Feature notes
 

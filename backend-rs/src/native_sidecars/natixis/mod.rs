@@ -191,7 +191,7 @@ pub struct NatixisConfig {
     pub operations_budget: Duration,
     pub fund_detail_budget: Duration,
     pub clock: Arc<dyn Clock>,
-    /// Where a passkey prompt can be asked for; None everywhere but Picsou Desktop on Windows.
+    /// Where a passkey prompt can be asked for; None outside Picsou Desktop on Windows or Linux.
     pub passkey_bridge: Option<PasskeyBridge>,
 }
 

@@ -55,28 +55,29 @@ backend stores the returned sessionState, re-checks plan totals and writes one
 EMPLOYEE_SAVINGS account per plan with its fund holdings
 ```
 
-### Passkey sign-in (Picsou Desktop on Windows)
+### Passkey sign-in (Picsou Desktop on Windows and Linux)
 
 An account can sign in with a passkey it already has, from the e-mail alone. It needs
 the in-process connector and the desktop shell's prompt, so the button only appears
 when `GET /api/natixis/auth/passkey` answers `{"available": true}`
-([ADR](../decisions/2026-11-25-natixis-passkey-on-desktop.md)).
+([ADR](../decisions/2026-11-25-natixis-passkey-on-desktop.md),
+[Linux](../decisions/2026-11-26-passkey-security-keys-on-linux.md)).
 
 ```
 UI ── email ──▶ POST /api/natixis/auth/passkey ──▶ connector /passkey
         authorize (PKCE) → SAML SSO page → login modes (WEBAUTHN)
         → webauthn/authentication/options
-        ──▶ shell POST /passkey/assertion ──▶ Windows prompt, confirmed by the saver
+        ──▶ shell POST /passkey/assertion ──▶ passkey prompt, confirmed by the saver
         → webauthn/authentication/verifications
         → profile check → SAML response → tokens → users/me   (as after a code)
 UI ◀── session status; the first sync is queued
 ```
 
 - `backend-rs/src/native_sidecars/natixis/passkey.rs` runs the steps;
-  `desktop/src-tauri/src/passkey/` calls Windows.
+  `desktop/src-tauri/src/passkey/` calls Windows, or a USB security key on Linux.
 - **Browser identity.** Natixis answers the passkey check with a 500 when the request
   carries no browser `User-Agent` and `Accept-Language`. The passkey login names Chrome
-  on Windows, in every request.
+  on Windows, in every request, on Linux too: it is the identity the flow was verified with.
 - **Encoding.** Natixis reads the assertion in standard base64 with padding. The
   verification body is `rawId` and `response`, with no `id` or `type`.
 - The relying party in the options must be the identity provider's host; the shell
@@ -211,7 +212,7 @@ spending. The rows stay visible on the account page and in exports.
   (`AUTH_ATTEMPT_EXPIRED`), well before Natixis would lock the account.
 - **Accounts without a password login** (passkey only), or without an SMS, e-mail or
   voice channel, get `MFA_TYPE_UNSUPPORTED` from the password login. A passkey-only
-  account signs in with its passkey on Picsou Desktop for Windows.
+  account signs in with its passkey on Picsou Desktop for Windows or Linux.
 - **Natixis can ask a new device to register a passkey** after the password and the code:
   the profile check answers `403` `WEBAUTHN_REGISTRATION_REQUIRED`. It was seen on accounts
   that already have a passkey; every Picsou login is a new device (a new `x-device-id`). The
@@ -267,7 +268,8 @@ spending. The rows stay visible on the account page and in exports.
 - `frontend/src/demo/natixis.test.ts` and `NatixisPanel.test.tsx`.
 - Passkey: the flow against a fake Natixis and a fake shell
   (`tests/integration/native_sidecars_b/natixis_passkey.rs`), and the shell's request
-  checks (`cargo test` in `desktop/src-tauri`). The Windows prompt itself is only
+  checks and, on Linux, the steps of the passkey window (`cargo test` in
+  `desktop/src-tauri`). The Windows prompt and the USB exchange with a key are only
   exercised by a real sign-in.
 
 ## Links

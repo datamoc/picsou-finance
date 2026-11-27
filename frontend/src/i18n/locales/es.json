@@ -1685,12 +1685,12 @@
       "scope": "Sincroniza tus planes de ahorro salarial de Natixis Interépargne (PEE, PERCO, PER…) y los fondos que contienen: participaciones, valor liquidativo y ganancia. Tras este primer inicio de sesión, las sincronizaciones se ejecutan solas hasta que Natixis cierre la sesión; entonces deberás volver a conectarte.",
       "passkey": {
         "connect": "Acceder con una passkey",
-        "hint": "Con una passkey basta el correo electrónico: Windows pide después tu huella, tu PIN o tu llave de seguridad.",
-        "waiting": "Confirma en la ventana de Windows."
+        "hint": "Con una passkey basta el correo electrónico: Picsou pide después tu llave de seguridad, tu PIN o tu huella.",
+        "waiting": "Confirma en la ventana de la passkey."
       },
       "errors": {
         "passkeyNotOffered": "Esta cuenta no ofrece acceso con passkey. Accede con tu contraseña.",
-        "passkeyNotConfirmed": "La solicitud de passkey se cerró o caducó. Cierra cualquier ventana de Windows abierta y vuelve a intentarlo.",
+        "passkeyNotConfirmed": "La solicitud de passkey se cerró o caducó. Cierra cualquier ventana de passkey abierta y vuelve a intentarlo.",
         "passkeyRefused": "Natixis Interépargne rechazó el correo electrónico o la passkey.",
         "tooManyAttempts": "Natixis Interépargne bloqueó nuevos intentos. Inténtalo más tarde.",
         "invalidCredentials": "Natixis Interépargne rechazó el correo o la contraseña.",

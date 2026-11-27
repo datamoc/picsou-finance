@@ -274,7 +274,7 @@ async fn passkey_login(
     if !offers_passkey(&state) {
         return Err(error(
             SidecarErrorCode::UpstreamUnavailable,
-            "Passkey sign-in needs Picsou Desktop on Windows",
+            "Passkey sign-in needs Picsou Desktop on Windows or Linux",
         )
         .into());
     }

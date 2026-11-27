@@ -65,7 +65,9 @@ serves the backend on loopback for the banks that need the saver at the screen.
 
 ## Trade-offs accepted
 
-- **Windows desktop only.** macOS, Linux, Docker and Helm keep the password login.
+- **Desktop only.** This decision covers Windows; Linux followed with
+  [USB security keys](./2026-11-26-passkey-security-keys-on-linux.md). macOS, Docker and Helm
+  keep the password login.
 - **A passkey held by a password manager's browser extension cannot be used**: Windows
   offers Windows Hello, security keys and the providers registered with it.
 - **`webauthn.dll` is linked at load time**, so the app needs Windows 10 1809 or later.

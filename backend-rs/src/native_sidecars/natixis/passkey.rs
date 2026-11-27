@@ -1,8 +1,8 @@
 //! `POST /passkey` (`{email}` -> `{sessionState}`): sign in with a passkey instead of a password
 //! and a code.
 //!
-//! Natixis hands out a WebAuthn challenge, the desktop shell has the operating system sign it (the
-//! person confirms in the system prompt), and the assertion goes back to Natixis. The login then
+//! Natixis hands out a WebAuthn challenge, the desktop shell has the person's authenticator sign it
+//! (they confirm in the shell's prompt), and the assertion goes back to Natixis. The login then
 //! ends like a password one, with the same session state: no key or credential is kept. A server
 //! has no way to show that prompt, so the route only works where a [`PasskeyBridge`] is set.
 
@@ -26,18 +26,18 @@ use super::{
 use crate::config::Config;
 use crate::native_sidecars::{NativeError, NativeResponse};
 
-/// The longest the shell keeps the system prompt open.
+/// The longest the shell keeps the passkey prompt open.
 const MAX_PROMPT: Duration = Duration::from_secs(120);
 /// The shell answers within [`MAX_PROMPT`]; the margin covers the prompt opening and closing.
 const BRIDGE_TIMEOUT: Duration = Duration::from_secs(135);
 const MAX_CHALLENGE_CHARS: usize = 2048;
 const API_KEY_HEADER: &str = "X-Picsou-Sidecar-Key";
 /// Natixis only serves what looks like its saver space open in a browser: without a browser's
-/// `User-Agent` and `Accept-Language` it answers the passkey check with a 500. The passkey prompt
-/// is Windows', so the browser named is one on Windows.
+/// `User-Agent` and `Accept-Language` it answers the passkey check with a 500. The browser named is
+/// the one the flow was verified with, Chrome on Windows, whatever system the shell runs on.
 const BROWSER_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
 
-/// The desktop shell's loopback route that asks the operating system for an assertion.
+/// The desktop shell's loopback route that asks an authenticator for an assertion.
 #[derive(Clone)]
 pub struct PasskeyBridge {
     url: String,

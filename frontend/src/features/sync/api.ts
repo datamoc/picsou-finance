@@ -522,7 +522,7 @@ export const natixisApi = {
   ...sidecarApi<NatixisSessionStatus, NatixisAuthInitResponse>('/natixis'),
   initiateAuth: (email: string, password: string) =>
     api.post<NatixisAuthInitResponse>('/natixis/auth/initiate', { email, password }).then(r => r.data),
-  /** Whether this install can ask the operating system for a passkey (Picsou Desktop on Windows). */
+  /** Whether this install can ask for a passkey (Picsou Desktop on Windows or Linux). */
   getPasskeyAvailability: () =>
     api.get<{ available: boolean }>('/natixis/auth/passkey').then(r => r.data),
   /** Answers once the passkey prompt is confirmed and the first import is queued. */

@@ -333,7 +333,7 @@ pub fn start(
         env.push(("BNP_AUTH_URL".to_owned(), bridge_url));
         env.push(("AMEX_AUTH_URL".to_owned(), amex_url));
         env.push(("REVOLUT_AUTH_URL".to_owned(), revolut_url));
-        if cfg!(windows) {
+        if cfg!(any(windows, target_os = "linux")) {
             env.push((PASSKEY_URL_VARIABLE.to_owned(), passkey_url));
         }
         env.push(("APP_SIDECAR_API_KEY".to_owned(), sidecar_key.clone()));

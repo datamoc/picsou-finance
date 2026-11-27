@@ -1685,12 +1685,12 @@
       "scope": "Synchronisiert deine Mitarbeitersparpläne bei Natixis Interépargne (PEE, PERCO, PER…) und die darin gehaltenen Fonds: Anteile, Anteilswert und Gewinn. Nach dieser ersten Anmeldung laufen Synchronisierungen von selbst, bis Natixis die Sitzung beendet; dann musst du dich erneut verbinden.",
       "passkey": {
         "connect": "Mit Passkey anmelden",
-        "hint": "Mit einem Passkey genügt die E-Mail: Windows fragt dann nach Fingerabdruck, PIN oder Sicherheitsschlüssel.",
-        "waiting": "Bestätige im Windows-Fenster."
+        "hint": "Mit einem Passkey genügt die E-Mail: Picsou fragt dann nach Sicherheitsschlüssel, PIN oder Fingerabdruck.",
+        "waiting": "Bestätige im Passkey-Fenster."
       },
       "errors": {
         "passkeyNotOffered": "Dieses Konto bietet keine Anmeldung per Passkey. Melde dich mit deinem Passwort an.",
-        "passkeyNotConfirmed": "Die Passkey-Abfrage wurde geschlossen oder ist abgelaufen. Schließe offene Windows-Fenster und versuche es erneut.",
+        "passkeyNotConfirmed": "Die Passkey-Abfrage wurde geschlossen oder ist abgelaufen. Schließe offene Passkey-Fenster und versuche es erneut.",
         "passkeyRefused": "Natixis Interépargne hat die E-Mail oder den Passkey abgelehnt.",
         "tooManyAttempts": "Natixis Interépargne hat weitere Versuche blockiert. Bitte versuche es später erneut.",
         "invalidCredentials": "Natixis Interépargne hat die E-Mail oder das Passwort abgelehnt.",

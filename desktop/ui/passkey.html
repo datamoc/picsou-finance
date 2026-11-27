@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Picsou</title>
+    <style>
+      /* DESIGN.md: Vault Light canvas, Ledger Ink, Quiet Slate, Coffre Blue on the one control. */
+      :root {
+        --canvas: oklch(1 0 0);
+        --ink: oklch(0.145 0 0);
+        --slate: oklch(0.45 0 0);
+        --ring: oklch(0.145 0 0 / 10%);
+        --primary: oklch(0.488 0.243 264.376);
+        --primary-ink: oklch(0.97 0.014 254.604);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --canvas: oklch(0.145 0 0);
+          --ink: oklch(0.985 0 0);
+          --slate: oklch(0.708 0 0);
+          --ring: oklch(1 0 0 / 10%);
+          --primary: oklch(0.707 0.165 254.624);
+          --primary-ink: oklch(0.19 0.06 267.935);
+        }
+      }
+      html, body { height: 100%; margin: 0; }
+      body {
+        display: grid; place-items: center; background: var(--canvas); color: var(--ink);
+        font: 0.875rem/1.5 "Plus Jakarta Sans Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased; cursor: default; user-select: none;
+      }
+      main { width: min(22rem, calc(100% - 3rem)); text-align: center; }
+      h1 { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; }
+      p { margin: 0; }
+      #detail { margin-top: 0.25rem; color: var(--slate); }
+      form { display: grid; gap: 0.5rem; margin-top: 1rem; text-align: left; }
+      input {
+        height: 2.25rem; padding: 0 0.75rem; border: 0; border-radius: 0.5rem; font: inherit;
+        background: var(--canvas); color: var(--ink); box-shadow: 0 0 0 1px var(--ring);
+      }
+      #choices { display: grid; gap: 0.5rem; margin-top: 1rem; }
+      .actions { margin-top: 1rem; }
+      button {
+        height: 2.25rem; padding: 0 1rem; border: 0; border-radius: 0.5rem; font: inherit;
+        font-weight: 500; cursor: pointer; transition: transform 0.1s ease-out;
+        background: var(--primary); color: var(--primary-ink);
+      }
+      button.quiet { background: transparent; color: var(--ink); box-shadow: 0 0 0 1px var(--ring); }
+      button:active { transform: scale(0.98); }
+      button:focus-visible, input:focus-visible { outline: 2px solid var(--slate); outline-offset: 2px; }
+      [hidden] { display: none !important; }
+      @media (prefers-reduced-motion: reduce) { button { transition: none; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Picsou</h1>
+      <div aria-live="polite">
+        <p id="message">Insert your security key.</p>
+        <p id="detail" hidden></p>
+      </div>
+      <form id="form" hidden>
+        <label for="pin" id="pinLabel">Security key PIN</label>
+        <input id="pin" type="password" minlength="4" maxlength="63" required autocomplete="off" />
+        <button type="submit" id="submit">Continue</button>
+      </form>
+      <div id="choices" hidden></div>
+      <div class="actions">
+        <button type="button" class="quiet" id="close">Cancel</button>
+      </div>
+    </main>
+    <script>
+      // The shell's four languages, as in the app; the markup above is the English fallback. One
+      // text per line: the shell's tests count them.
+      const TEXTS = {
+        en: {
+          insert: "Insert your security key.",
+          noAccess: "Your security key is plugged in, but your account may not open it. Install your system's FIDO rules (libfido2-1 on Debian and Ubuntu), then unplug the key and plug it in again.",
+          selectKey: "Several keys are plugged in: touch the one to use.",
+          pin: "Enter the PIN of your security key.",
+          wait: "Checking.",
+          touch: "Touch your security key.",
+          fingerprint: "Fingerprint not recognised. Try again on your security key.",
+          accounts: "Choose the passkey to sign in with.",
+          noCredential: "This security key holds no passkey for this bank.",
+          pinNotSet: "This security key has no PIN. Set one with your browser or the maker's tool, then try again.",
+          pinBlocked: "The PIN of this security key is blocked after too many wrong attempts.",
+          replug: "Too many wrong attempts. Unplug the security key, plug it in again and retry.",
+          unsupported: "This security key cannot be used for this sign-in.",
+          failed: "The security key did not answer as expected. Unplug it and try again.",
+          pinWrong: "Wrong PIN.",
+          retries: "Attempts left: ",
+          pinLabel: "Security key PIN",
+          account: "Passkey ",
+          submit: "Continue",
+          cancel: "Cancel",
+          close: "Close",
+        },
+        fr: {
+          insert: "Branchez votre clé de sécurité.",
+          noAccess: "Votre clé de sécurité est branchée, mais votre compte n'a pas le droit d'y accéder. Installez les règles FIDO de votre système (libfido2-1 sur Debian et Ubuntu), puis débranchez la clé et rebranchez-la.",
+          selectKey: "Plusieurs clés sont branchées : touchez celle à utiliser.",
+          pin: "Saisissez le code PIN de votre clé de sécurité.",
+          wait: "Vérification.",
+          touch: "Touchez votre clé de sécurité.",
+          fingerprint: "Empreinte non reconnue. Réessayez sur votre clé de sécurité.",
+          accounts: "Choisissez la clé d'accès avec laquelle vous connecter.",
+          noCredential: "Cette clé de sécurité ne contient aucune clé d'accès pour cette banque.",
+          pinNotSet: "Cette clé de sécurité n'a pas de code PIN. Définissez-en un avec votre navigateur ou l'outil du fabricant, puis réessayez.",
+          pinBlocked: "Le code PIN de cette clé de sécurité est bloqué après trop d'essais erronés.",
+          replug: "Trop d'essais erronés. Débranchez la clé de sécurité, rebranchez-la et recommencez.",
+          unsupported: "Cette clé de sécurité ne peut pas servir à cette connexion.",
+          failed: "La clé de sécurité n'a pas répondu comme prévu. Débranchez-la et réessayez.",
+          pinWrong: "Code PIN erroné.",
+          retries: "Essais restants : ",
+          pinLabel: "Code PIN de la clé de sécurité",
+          account: "Clé d'accès ",
+          submit: "Continuer",
+          cancel: "Annuler",
+          close: "Fermer",
+        },
+        es: {
+          insert: "Conecta tu llave de seguridad.",
+          noAccess: "Tu llave de seguridad está conectada, pero tu usuario no tiene permiso para abrirla. Instala las reglas FIDO de tu sistema (libfido2-1 en Debian y Ubuntu), desconecta la llave y vuelve a conectarla.",
+          selectKey: "Hay varias llaves conectadas: toca la que quieras usar.",
+          pin: "Introduce el PIN de tu llave de seguridad.",
+          wait: "Comprobando.",
+          touch: "Toca tu llave de seguridad.",
+          fingerprint: "Huella no reconocida. Vuelve a intentarlo en tu llave de seguridad.",
+          accounts: "Elige la passkey con la que acceder.",
+          noCredential: "Esta llave de seguridad no tiene ninguna passkey para este banco.",
+          pinNotSet: "Esta llave de seguridad no tiene PIN. Crea uno con tu navegador o la herramienta del fabricante y vuelve a intentarlo.",
+          pinBlocked: "El PIN de esta llave de seguridad está bloqueado tras demasiados intentos erróneos.",
+          replug: "Demasiados intentos erróneos. Desconecta la llave de seguridad, vuelve a conectarla y reinténtalo.",
+          unsupported: "Esta llave de seguridad no sirve para este acceso.",
+          failed: "La llave de seguridad no respondió como se esperaba. Desconéctala y vuelve a intentarlo.",
+          pinWrong: "PIN incorrecto.",
+          retries: "Intentos restantes: ",
+          pinLabel: "PIN de la llave de seguridad",
+          account: "Passkey ",
+          submit: "Continuar",
+          cancel: "Cancelar",
+          close: "Cerrar",
+        },
+        de: {
+          insert: "Steck deinen Sicherheitsschlüssel ein.",
+          noAccess: "Dein Sicherheitsschlüssel ist eingesteckt, aber dein Benutzerkonto darf nicht darauf zugreifen. Installiere die FIDO-Regeln deines Systems (libfido2-1 unter Debian und Ubuntu), zieh den Schlüssel dann ab und steck ihn wieder ein.",
+          selectKey: "Mehrere Schlüssel sind eingesteckt: Berühre den, den du verwenden willst.",
+          pin: "Gib die PIN deines Sicherheitsschlüssels ein.",
+          wait: "Wird geprüft.",
+          touch: "Berühre deinen Sicherheitsschlüssel.",
+          fingerprint: "Fingerabdruck nicht erkannt. Versuch es erneut am Sicherheitsschlüssel.",
+          accounts: "Wähle den Passkey für die Anmeldung.",
+          noCredential: "Dieser Sicherheitsschlüssel enthält keinen Passkey für diese Bank.",
+          pinNotSet: "Dieser Sicherheitsschlüssel hat keine PIN. Lege eine mit deinem Browser oder dem Werkzeug des Herstellers fest und versuch es erneut.",
+          pinBlocked: "Die PIN dieses Sicherheitsschlüssels ist nach zu vielen Fehlversuchen gesperrt.",
+          replug: "Zu viele Fehlversuche. Zieh den Sicherheitsschlüssel ab, steck ihn wieder ein und versuch es erneut.",
+          unsupported: "Dieser Sicherheitsschlüssel eignet sich nicht für diese Anmeldung.",
+          failed: "Der Sicherheitsschlüssel hat nicht wie erwartet geantwortet. Zieh ihn ab und versuch es erneut.",
+          pinWrong: "Falsche PIN.",
+          retries: "Verbleibende Versuche: ",
+          pinLabel: "PIN des Sicherheitsschlüssels",
+          account: "Passkey ",
+          submit: "Weiter",
+          cancel: "Abbrechen",
+          close: "Schließen",
+        },
+      };
+      const lang = (navigator.language || "en").slice(0, 2).toLowerCase();
+      const text = TEXTS[lang] || TEXTS.en;
+      document.documentElement.lang = TEXTS[lang] ? lang : "en";
+      const byId = (id) => document.getElementById(id);
+      const message = byId("message");
+      const detail = byId("detail");
+      const form = byId("form");
+      const pin = byId("pin");
+      const choices = byId("choices");
+      const close = byId("close");
+      byId("pinLabel").textContent = text.pinLabel;
+      byId("submit").textContent = text.submit;
+      message.textContent = text.insert;
+      close.textContent = text.cancel;
+      const FINAL = ["noCredential", "pinNotSet", "pinBlocked", "replug", "unsupported", "failed"];
+      const invoke = (command, args) => window.__TAURI__.core.invoke(command, args);
+      const answer = (value) => invoke("passkey_answer", { answer: value });
+
+      const draw = (screen) => {
+        message.textContent = screen.wrong ? text.pinWrong + " " + text.pin : text[screen.step];
+        const left = typeof screen.retries === "number";
+        detail.textContent = left ? text.retries + screen.retries : "";
+        detail.hidden = !left;
+        form.hidden = screen.step !== "pin";
+        pin.value = "";
+        if (!form.hidden) pin.focus();
+        choices.hidden = screen.step !== "accounts";
+        choices.replaceChildren(
+          ...(screen.names || []).map((name, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "quiet";
+            button.textContent = name || text.account + (index + 1);
+            button.addEventListener("click", () => answer({ account: index }));
+            return button;
+          }),
+        );
+        close.textContent = FINAL.includes(screen.step) ? text.close : text.cancel;
+      };
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const typed = pin.value;
+        pin.value = "";
+        answer({ pin: typed });
+      });
+      close.addEventListener("click", () => answer("close"));
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") answer("close");
+      });
+
+      let seq = -1;
+      const refresh = async () => {
+        const screen = await invoke("passkey_view");
+        if (screen && screen.seq !== seq) {
+          seq = screen.seq;
+          draw(screen);
+        }
+        setTimeout(refresh, 250);
+      };
+      refresh();
+    </script>
+  </body>
+</html>

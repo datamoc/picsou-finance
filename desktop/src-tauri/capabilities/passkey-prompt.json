@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "passkey-prompt",
+  "description": "The bundled ui/passkey.html window may show a security key sign-in and answer it. No remote URL is listed, so backend pages cannot call it.",
+  "windows": ["passkey-*"],
+  "permissions": ["allow-passkey-prompt"]
+}

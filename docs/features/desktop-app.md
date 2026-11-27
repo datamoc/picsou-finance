@@ -32,6 +32,10 @@ Picsou is a free, open-source, self-hosted project and does not yet pay for an A
 
 - **AppImage**: make the file executable (`chmod +x Picsou*.AppImage`) and run it.
 - **Debian / Ubuntu (`.deb`)**: install with `sudo apt install ./Picsou_*.deb`.
+- **Passkey sign-in with a USB security key**: the key must be readable by your user, which
+  systemd's udev rules grant on a desktop session. If the passkey window says your account may
+  not open the key, install your distribution's FIDO rules (`libfido2-1` on Debian and Ubuntu),
+  then unplug the key and plug it in again.
 
 ## Context
 
@@ -150,12 +154,19 @@ no external database process, and no bundled PostgreSQL server.
   bridge), including when the disconnect lands while the window is still opening; a status poll
   that arrives after the disconnect answers `AUTH_ATTEMPT_EXPIRED` and starts no sync. A WebView
   `processId` is refused by `POST /api/bnp/auth/complete` and stays usable by its own window.
-- **Passkey prompt** (`passkey/`, Windows only): the same bridge answers
+- **Passkey prompt** (`passkey/`, Windows and Linux): the same bridge answers
   `POST /passkey/assertion` for the Natixis passkey login. The shell builds the signed
-  client data for an allow-listed relying party, shows the main window and lets Windows
-  ask for a fingerprint, a PIN or a security key. One prompt is open at a time. The
+  client data for an allow-listed relying party. One prompt is open at a time. The
   backend learns the route from `NATIXIS_PASSKEY_URL`, which only the shell may set
   ([ADR](../decisions/2026-11-25-natixis-passkey-on-desktop.md)).
+  - *Windows*: the shell shows the main window and lets Windows ask for a fingerprint, a
+    PIN or a security key.
+  - *Linux* (`passkey/linux/`): the shell reads a USB security key over `hidraw` and draws
+    the prompt in its own window (`ui/passkey.html`): insert, PIN, touch, choice of passkey,
+    a key the user may not open (`access.rs` looks every second, as the library skips it in
+    silence), and why a sign-in cannot go on (no passkey for the bank, PIN missing or blocked). The
+    window polls `passkey_view` and answers with `passkey_answer`; only it may call them
+    ([ADR](../decisions/2026-11-26-passkey-security-keys-on-linux.md)).
 - **Remaining Chromium sidecars** (amundi, banque-populaire, bourse-direct, caisse-epargne, corum,
   fortuneo, lbp, tr): `fetch_runtime.py` bundles `runtime/python/` (python-build-standalone,
   SHA-256 checked, Tk/IDLE/pip/headers trimmed, `bin/python3` flattened) and `runtime/sidecars/`

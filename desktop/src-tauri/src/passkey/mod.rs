@@ -1,14 +1,17 @@
 //! Passkey assertions for bank logins, signed by the operating system.
 //!
-//! The backend asks over the loopback bank bridge; the OS shows its own prompt (Windows Hello or a
-//! security key) and the private key never leaves the authenticator. The shell builds the
+//! The backend asks over the loopback bank bridge; the person confirms in a prompt (Windows' own,
+//! or on Linux the shell's window for a USB security key) and the private key never leaves the
+//! authenticator. The shell builds the
 //! `clientDataJSON` itself, for an allow-listed relying party only, so a caller can neither choose
 //! the signed origin nor sign for another site. Nothing here logs or stores a challenge, a
 //! credential id or a signature.
 
-// Only Windows drives an authenticator yet; elsewhere the route answers that none is there.
-#![cfg_attr(not(windows), allow(dead_code))]
+// Only Windows and Linux drive an authenticator yet; elsewhere the route answers that none is there.
+#![cfg_attr(not(any(windows, target_os = "linux")), allow(dead_code))]
 
+#[cfg(target_os = "linux")]
+pub mod linux;
 #[cfg(windows)]
 mod windows;
 
@@ -109,11 +112,12 @@ pub enum Failure {
     TimedOut,
     /// This system has no passkey interface.
     Unavailable,
-    /// Anything else the OS reported, as its status code.
+    /// Anything else Windows reported, as its status code.
+    #[cfg_attr(not(windows), allow(dead_code))]
     System(i32),
 }
 
-/// The OS call, blocking until the person answers the prompt.
+/// The sign-in, blocking until the person answers the prompt.
 pub trait Authenticator: Send + Sync + 'static {
     fn assert(&self, prompt: &Prompt) -> Result<Assertion, Failure>;
 }
@@ -277,7 +281,13 @@ pub fn system(app: tauri::AppHandle) -> Arc<dyn Authenticator> {
     Arc::new(windows::WindowsAuthenticator::new(app))
 }
 
-#[cfg(not(windows))]
+/// A USB security key, with the shell's own window as the prompt.
+#[cfg(target_os = "linux")]
+pub fn system(app: tauri::AppHandle) -> Arc<dyn Authenticator> {
+    Arc::new(linux::SecurityKeyAuthenticator::new(app))
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 pub fn system(_app: tauri::AppHandle) -> Arc<dyn Authenticator> {
     struct NoAuthenticator;
     impl Authenticator for NoAuthenticator {

@@ -10,7 +10,8 @@ interface NatixisPanelProps {
 
 /**
  * Natixis Interépargne employee savings; the code arrives by SMS, e-mail or voice call, never an
- * app push. Picsou Desktop on Windows can sign in with a passkey instead of a password and code.
+ * app push. Picsou Desktop on Windows or Linux can sign in with a passkey instead of a password and
+ * code.
  */
 export function NatixisPanel({ onConnected }: NatixisPanelProps = {}) {
   const { data: passkey } = useQuery({

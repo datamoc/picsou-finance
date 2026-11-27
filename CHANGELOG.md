@@ -21,10 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Natixis Interépargne: sign in with a passkey (Picsou Desktop for Windows).** Type your e-mail,
-  then confirm with Windows Hello or your security key: no password and no code. Picsou uses a
-  passkey you already have, never creates one, and keeps the same session as a password login.
-  Docker and Helm installs keep the password login.
+- **Natixis Interépargne: sign in with a passkey (Picsou Desktop for Windows and Linux).** Type
+  your e-mail, then confirm with Windows Hello or your security key on Windows, or with a USB
+  security key and its PIN on Linux: no password and no code. Picsou uses a passkey you already
+  have, never creates one, and keeps the same session as a password login. Docker and Helm
+  installs keep the password login.
 - **French life-insurance companies in the manual account provider picker (#798).** When adding or
   editing a manual assurance vie or PER account, the provider field now suggests the main French
   insurers (CNP Assurances, Suravenir, Groupama, Abeille Assurances, Generali, Spirica, AXA,
