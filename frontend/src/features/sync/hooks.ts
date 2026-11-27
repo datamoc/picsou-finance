@@ -17,6 +17,7 @@ import {
   simplefinApi,
   wiseApi,
   louveApi,
+  lucyaApi,
 } from './api'
 import { ACCOUNT_VIEWS, syncKeys } from './keys'
 import { sidecarProviders } from './providers'
@@ -115,6 +116,20 @@ export function useDeleteBankConnection() {
   return useInvalidatingMutation({
     mutationFn: (id: number) => bankSyncApi.deleteConnection(id),
     invalidates: [syncKeys.banks(), ...ACCOUNT_VIEWS],
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Lucya
+// ---------------------------------------------------------------------------
+
+export function useLucyaRefresh() {
+  return useInvalidatingMutation({
+    mutationFn: ({ identifier, password }: { identifier: string; password: string }) =>
+      lucyaApi.refresh(identifier, password),
+    invalidates: [...ACCOUNT_VIEWS],
+    // The variables hold the password: drop them as soon as the panel is gone.
+    gcTime: 0,
   })
 }
 

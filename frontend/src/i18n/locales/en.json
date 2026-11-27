@@ -2200,6 +2200,26 @@
         "serverError": "Could not reach CORUM. Please try again."
       }
     },
+    "lucya": {
+      "title": "Lucya",
+      "identifier": "Identifier",
+      "password": "Password",
+      "refresh": "Refresh",
+      "refreshing": "Reading the contracts…",
+      "scope": "Reads the value of your Lucya life insurance and PER contracts. Nothing is kept, neither a session nor your password: to update the values, sign in here again.",
+      "success_one": "{{count}} contract updated.",
+      "success_other": "{{count}} contracts updated.",
+      "errors": {
+        "invalidCredentials": "Lucya refused the identifier or the password.",
+        "captchaBlocked": "Lucya asks for an anti-robot check that Picsou does not pass. Try again later.",
+        "mfaTypeUnsupported": "This account asks for a second factor that Picsou cannot handle yet.",
+        "tooManyAttempts": "Too many attempts. Wait before trying again.",
+        "portfolioIncomplete": "The contracts read do not add up to the total Lucya shows. Your existing data was kept.",
+        "formatChanged": "The Lucya website format changed. Your existing data was kept.",
+        "invalidData": "Check the identifier and password you typed.",
+        "serverError": "Lucya is temporarily unavailable. Please try again."
+      }
+    },
     "sofidy": {
       "title": "Sofidy",
       "login": "Associate code",

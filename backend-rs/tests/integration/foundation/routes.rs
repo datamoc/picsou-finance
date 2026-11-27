@@ -50,6 +50,8 @@ const FRAMEWORK_ROUTES: &[(&str, &str)] = &[
     // BoursoBank passkey sign-in through the desktop shell.
     ("GET", "/api/bourso/auth/passkey"),
     ("POST", "/api/bourso/auth/passkey"),
+    // Lucya refresh by signing in (nothing stored).
+    ("POST", "/api/lucya/refresh"),
 ];
 
 /// Spring and axum share the {name} syntax; a regex constraint ({id:\d+}) and the variable name

@@ -143,6 +143,7 @@
 | Amundi Épargne Salariale sync | 2026-08-09 | [amundi-epargne-salariale.md](./features/amundi-epargne-salariale.md) |
 | Crédit Mutuel / CIC Épargne Salariale sync | 2026-10-24 | [cmes-epargne-salariale.md](./features/cmes-epargne-salariale.md) |
 | Natixis Interépargne sync | 2026-11-06 | [natixis-interepargne.md](./features/natixis-interepargne.md) |
+| Lucya contracts (life insurance and PER) | 2026-11-27 | [lucya.md](./features/lucya.md) |
 | CIC online-banking sync (livrets) | 2026-10-24 | [cic-banking.md](./features/cic-banking.md) |
 | American Express France credit-card sidecar | 2026-10-31 | [amex-sidecar.md](./features/amex-sidecar.md) |
 | Trade Republic — Holdings deduplication | 2026-05-18 | [trade-republic-holding-deduplication.md](./features/trade-republic-holding-deduplication.md) |

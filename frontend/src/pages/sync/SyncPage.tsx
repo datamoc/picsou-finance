@@ -5,6 +5,7 @@ import {
   Buildings,
   Eye,
   MagnifyingGlass,
+  ShieldCheck,
   X,
 } from '@phosphor-icons/react'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -64,6 +65,7 @@ import { AmexTab } from './AmexTab'
 import { CorumTab } from './CorumTab'
 import { SofidyTab } from './SofidyTab'
 import { LouveTab } from './LouveTab'
+import { LucyaTab } from './LucyaTab'
 import { LOUVE_CALLBACK_PATH } from '@/components/sync/LouvePanel'
 import { BoursoTab } from './BoursoTab'
 import { CaisseEpargneTab } from './CaisseEpargneTab'
@@ -110,6 +112,7 @@ const CONNECTORS: ConnectorDef[] = [
   { id: 'corum', category: 'cryptoAndWealth', labelKey: 'sync.corum.title', icon: CorumLogo, keywords: 'corum scpi assurance vie' },
   { id: 'sofidy', category: 'cryptoAndWealth', labelKey: 'sync.sofidy.title', icon: SofidyLogo, keywords: 'sofidy scpi immobilier' },
   { id: 'louve', category: 'cryptoAndWealth', labelKey: 'sync.louve.title', icon: Buildings, keywords: 'louve invest scpi immobilier' },
+  { id: 'lucya', category: 'cryptoAndWealth', labelKey: 'sync.lucya.title', icon: ShieldCheck, keywords: 'lucya assurance vie per' },
   { id: 'finary', category: 'cryptoAndWealth', labelKey: 'sync.finary.title', icon: FinaryLogo, keywords: 'finary agregateur patrimoine' },
 
   { id: 'actual', category: 'imports', labelKey: 'sync.actual.title', icon: ActualBudgetLogo, keywords: 'actual budget import sqlite' },
@@ -197,6 +200,7 @@ export function SyncPage() {
       case 'corum': return <CorumTab />
       case 'sofidy': return <SofidyTab />
       case 'louve': return <LouveTab />
+      case 'lucya': return <LucyaTab />
       case 'actual': return <ActualBudgetTab />
       case 'finary': return <FinaryTab />
       case 'homebank': return <HomeBankTab />

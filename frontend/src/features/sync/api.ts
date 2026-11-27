@@ -539,6 +539,19 @@ export const natixisApi = {
     api.post<NatixisSessionStatus>('/natixis/auth/passkey', { email }).then(r => r.data),
 }
 
+// --- Lucya (life insurance and PER): nothing is stored, signing in is the refresh ---
+
+export const lucyaApi = {
+  refresh: (identifier: string, password: string) =>
+    api
+      .post<{ contractCount: number }>(
+        '/lucya/refresh',
+        { identifier, password },
+        { skipGlobalErrorRedirect: true },
+      )
+      .then(r => r.data),
+}
+
 // --- CIC online banking (livrets the PSD2 connection does not expose) ---
 
 export const cicApi = {

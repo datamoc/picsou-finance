@@ -10,7 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **BoursoBank:** sign in with an existing passkey or security key in Picsou Desktop on Windows or Linux.
-
+- **Lucya life insurance and PER contracts.** On the Sync page, sign in to Lucya to create or
+  update one account per contract with its current value. Nothing is stored, neither a session nor
+  your password: signing in again is how you refresh.
 - **Natixis Interépargne: sign in with a passkey (Picsou Desktop for Windows and Linux).** Type
   your e-mail, then confirm with Windows Hello or your security key on Windows, or with a USB
   security key and its PIN on Linux: no password and no code. Picsou uses a passkey you already
