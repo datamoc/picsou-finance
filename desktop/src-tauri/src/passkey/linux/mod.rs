@@ -11,6 +11,7 @@ use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use authenticator::authenticatorservice::{AuthenticatorService, SignArgs};
+use authenticator::ctap2::attestation::AuthenticatorDataFlags;
 use authenticator::ctap2::server::{
     PublicKeyCredentialDescriptor, Transport as KeyTransport, UserVerificationRequirement,
 };
@@ -240,10 +241,18 @@ fn assertion(signed: SignResult, prompt: &Prompt) -> Result<Assertion, Failure> 
             return Err(Failure::Unavailable);
         }
     };
+    // The library rebuilds the signed bytes from the fields it parsed. No extension is asked
+    // for, so a key should add none; one it does not model would be lost, and the bank would
+    // refuse the signature.
+    if signed
+        .auth_data
+        .flags
+        .contains(AuthenticatorDataFlags::EXTENSION_DATA)
+    {
+        tracing::warn!("the security key added an extension: the bank may refuse the signature");
+    }
     Ok(Assertion {
         credential_id,
-        // The library rebuilds these bytes from their fields. No extension is asked for, so the
-        // key adds none and the rebuilt bytes are the signed ones.
         authenticator_data: signed.auth_data.to_vec(),
         signature: signed.signature,
         user_handle: signed.user.map(|user| user.id),
@@ -252,7 +261,7 @@ fn assertion(signed: SignResult, prompt: &Prompt) -> Result<Assertion, Failure> 
 
 #[cfg(test)]
 mod tests {
-    use authenticator::ctap2::attestation::{AuthenticatorData, AuthenticatorDataFlags};
+    use authenticator::ctap2::attestation::AuthenticatorData;
     use authenticator::ctap2::server::{AuthenticatorAttachment, RpIdHash};
 
     use super::super::AllowedCredential;

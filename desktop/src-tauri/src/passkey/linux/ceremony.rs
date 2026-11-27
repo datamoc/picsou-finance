@@ -168,9 +168,18 @@ pub fn run(
 /// The view that explains `error`, or the failure when there is nothing to explain.
 fn dead_end(error: &AuthenticatorError) -> Result<View, Failure> {
     Ok(match error {
-        AuthenticatorError::CancelledByUser => return Err(Failure::Cancelled),
-        // How the library reports that its own time ran out.
-        AuthenticatorError::U2FToken(U2FTokenError::NotAllowed) => return Err(Failure::TimedOut),
+        AuthenticatorError::CancelledByUser
+        | AuthenticatorError::HIDError(HIDError::Command(CommandError::StatusCode(
+            StatusCode::OperationDenied,
+            _,
+        ))) => return Err(Failure::Cancelled),
+        // How the library reports that its own time ran out, and how the key reports that it
+        // stopped waiting for a touch, which it does well before the prompt's limit.
+        AuthenticatorError::U2FToken(U2FTokenError::NotAllowed)
+        | AuthenticatorError::HIDError(HIDError::Command(CommandError::StatusCode(
+            StatusCode::UserActionTimeout | StatusCode::ActionTimeout,
+            _,
+        ))) => return Err(Failure::TimedOut),
         AuthenticatorError::HIDError(HIDError::Command(CommandError::StatusCode(
             StatusCode::NoCredentials,
             _,
@@ -422,17 +431,24 @@ mod tests {
     }
 
     #[test]
-    fn the_library_giving_up_is_a_cancellation_or_a_timeout() {
+    fn giving_up_is_a_cancellation_or_a_timeout_with_nothing_more_to_show() {
+        let key_says = |status| {
+            AuthenticatorError::HIDError(HIDError::Command(CommandError::StatusCode(status, None)))
+        };
         for (error, failure) in [
             (AuthenticatorError::CancelledByUser, Failure::Cancelled),
+            (key_says(StatusCode::OperationDenied), Failure::Cancelled),
             (
                 AuthenticatorError::U2FToken(U2FTokenError::NotAllowed),
                 Failure::TimedOut,
             ),
+            (key_says(StatusCode::UserActionTimeout), Failure::TimedOut),
+            (key_says(StatusCode::ActionTimeout), Failure::TimedOut),
         ] {
-            let (outcome, _) = play(vec![Event::Signed(Err(error))]);
+            let (outcome, views) = play(vec![Event::Signed(Err(error))]);
 
             assert_eq!(outcome.expect_err("over"), failure);
+            assert_eq!(views, vec![View::Insert]);
         }
     }
 
