@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Install secrets in the OS credential store on Desktop.** `JWT_SECRET` and `CRYPTO_ENCRYPTION_KEY`
+  now live in Credential Manager on Windows (DPAPI user scope, TPM-backed where a TPM exists) and in
+  the Secret Service provider (GNOME Keyring, KWallet) or kernel keyring on Linux, instead of
+  plaintext files next to the database. The desktop shell starts in `PICSOU_OS_KEYSTORE=auto`:
+  existing secrets files migrate into the vault on first boot (verified, then deleted) and stay
+  as a fallback when no vault answers; `PICSOU_OS_KEYSTORE=require` (opt-in via the user's
+  environment) refuses to start without the store and never writes plaintext. Docker and Helm
+  installs are unchanged. Server operators can set either mode explicitly.
+
 - **Explainable and actionable unclassified diversification amounts.** In Analysis → Diversification,
   the overall "unclassified" badge and each dimension's (Sectors, Regions) unclassified badge are
   now buttons that open a breakdown dialog listing every contributing position (including funds

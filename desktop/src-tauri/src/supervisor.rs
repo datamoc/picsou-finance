@@ -451,6 +451,10 @@ pub const NATIVE_SIDECARS: &[(&str, &str)] = &[
     ("BOURSO_AUTH_URL", "native://bourso-auth"),
 ];
 
+/// The OS credential store holding the install secrets: `auto` migrates the secrets files
+/// into it and keeps them as a fallback, `require` refuses to start without it.
+pub const OS_KEYSTORE_VARIABLE: &str = "PICSOU_OS_KEYSTORE";
+
 /// The backend's environment: loopback only, embedded SQLite under the app-data folder, plain
 /// HTTP cookies, per-launch desktop session token, and the 6 pure-HTTP bank connectors routed to
 /// their native Rust implementations.
@@ -475,6 +479,7 @@ pub fn backend_env(layout: &Layout, port: u16, desktop_token: &str) -> Vec<(Stri
         ("APP_STARTUP_SYNC_ENABLED", "false".to_owned()),
         ("APP_DESKTOP_MODE", "true".to_owned()),
         ("APP_DESKTOP_TOKEN", desktop_token.to_owned()),
+        (OS_KEYSTORE_VARIABLE, "auto".to_owned()),
     ]
     .into_iter()
     .map(|(k, v)| (k.to_owned(), v))
@@ -504,14 +509,31 @@ pub fn merge_backend_env(
         .filter(|(k, v)| !v.trim().is_empty() && NATIVE_SIDECARS.iter().any(|(nk, _)| nk == k))
         .map(|(k, _)| k.clone())
         .collect();
+    // The user may only strengthen the store choice, never weaken the default: anything
+    // but an explicit `require` still starts in `auto`.
+    let user_keystore = user_env
+        .iter()
+        .find(|(k, _)| k == OS_KEYSTORE_VARIABLE)
+        .map(|(_, v)| v.trim().to_owned())
+        .filter(|v| v == "require");
     let mut env: Vec<(String, String)> = user_env
         .into_iter()
-        .filter(|(k, _)| k != "APP_DESKTOP_TOKEN" && k != "APP_DESKTOP_LEGACY_POSTGRES")
+        .filter(|(k, _)| {
+            k != "APP_DESKTOP_TOKEN"
+                && k != "APP_DESKTOP_LEGACY_POSTGRES"
+                && k != OS_KEYSTORE_VARIABLE
+        })
         .collect();
     for (k, v) in backend_env(layout, port, desktop_token) {
-        if !overrides.contains(&k) {
-            env.push((k, v));
+        if overrides.contains(&k) {
+            continue;
         }
+        let v = if k == OS_KEYSTORE_VARIABLE {
+            user_keystore.clone().unwrap_or(v)
+        } else {
+            v
+        };
+        env.push((k, v));
     }
     env
 }
@@ -712,6 +734,7 @@ mod tests {
         assert_eq!(env["APP_STARTUP_SYNC_ENABLED"], "false");
         assert_eq!(env["APP_DESKTOP_MODE"], "true");
         assert_eq!(env["APP_DESKTOP_TOKEN"], "launch-token-hex");
+        assert_eq!(env[OS_KEYSTORE_VARIABLE], "auto");
         assert!(!env.contains_key("APP_DESKTOP_LEGACY_POSTGRES"));
         assert_eq!(env["APP_VERSION"], APP_VERSION);
         for (var, expected) in NATIVE_SIDECARS {
@@ -774,11 +797,46 @@ mod tests {
     }
 
     #[test]
+    fn the_os_keystore_defaults_to_auto_and_only_strengthens_to_require() {
+        let l = layout(&PathBuf::from("/picsou"));
+        let merged = |vars: Vec<(&str, &str)>| {
+            merge_backend_env(
+                vars.into_iter()
+                    .map(|(k, v)| (k.to_owned(), v.to_owned()))
+                    .collect(),
+                &l,
+                8123,
+                "launch-token-hex",
+            )
+            .into_iter()
+            .collect::<std::collections::HashMap<_, _>>()
+        };
+
+        assert_eq!(merged(vec![])[OS_KEYSTORE_VARIABLE], "auto");
+        assert_eq!(
+            merged(vec![(OS_KEYSTORE_VARIABLE, "require")])[OS_KEYSTORE_VARIABLE],
+            "require"
+        );
+        // Anything weaker than `require` still starts in `auto`: the shell never lets the
+        // user's environment downgrade the store choice back to plaintext files.
+        assert_eq!(
+            merged(vec![(OS_KEYSTORE_VARIABLE, "off")])[OS_KEYSTORE_VARIABLE],
+            "auto"
+        );
+        assert_eq!(
+            merged(vec![(OS_KEYSTORE_VARIABLE, "")])[OS_KEYSTORE_VARIABLE],
+            "auto"
+        );
+    }
+
+    #[test]
     fn backend_env_loads_into_picsou_config_with_sqlite_target() {
         let root = scratch("config");
         let l = layout(&root);
         let token = ephemeral_token().unwrap();
-        let env = backend_env(&l, 8123, &token);
+        let mut env = backend_env(&l, 8123, &token);
+        // Hermetic: the default `auto` would touch the machine's real credential store.
+        env.push((OS_KEYSTORE_VARIABLE.to_owned(), "off".to_owned()));
         let config = Config::load(&Env::from_map(env)).unwrap();
 
         assert!(config.desktop_mode);

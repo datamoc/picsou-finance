@@ -103,6 +103,7 @@
 | 2026-11-22 | [Dual-engine database architecture (Embedded SQLite + PostgreSQL)](./decisions/2026-11-22-sqlite-dual-engine.md) | Proposed |
 | 2026-11-24 | [A dependency cache and test shards for the Rust CI jobs](./decisions/2026-11-24-rust-ci-cache-and-shards.md) | Active |
 | 2026-11-25 | [How Picsou names a fund the provider does not identify](./decisions/2026-11-25-tracked-fund-isin.md) | Active |
+| 2026-11-27 | [Install secrets in the OS credential store](./decisions/2026-11-27-os-keystore.md) | Proposed |
 
 ## Feature notes
 
@@ -207,6 +208,7 @@
 | Revolut pockets (reconstruction from PSD2 internal-transfer rows) (removed, 2026-07-14) | 2026-06-28 | [revolut-pockets.md](./features/revolut-pockets.md) |
 | Revolut sidecar (assisted-enrolment login connector) | 2026-10-31 | [revolut-sidecar.md](./features/revolut-sidecar.md) |
 | Dividend forecast (shares, ETFs, SCPI) as upcoming capital income | 2026-11-05 | [dividend-forecast.md](./features/dividend-forecast.md) |
+| Install secrets in the OS credential store (DPAPI / Secret Service) | 2026-11-27 | [os-keystore.md](./features/os-keystore.md) |
 
 ## Lessons
 
