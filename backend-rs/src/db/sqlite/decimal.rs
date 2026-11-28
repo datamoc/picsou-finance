@@ -360,11 +360,15 @@ pub fn pg_numeric_column_scale(sql: &str, col_name: &str) -> Option<u32> {
         | "fees"
         | "price_per_unit" => Some(8),
 
-        // Scale 6: NUMERIC(9, 6) / NUMERIC(12, 6)
-        "latitude" | "longitude" => Some(6),
+        // Scale 6: NUMERIC(9, 6) / NUMERIC(12, 6) / NUMERIC(19, 6)
+        "latitude" | "longitude" | "ratio_numerator" | "ratio_denominator" => Some(6),
 
-        // Scale 4: NUMERIC(5, 4) / NUMERIC(6, 4)
-        "interest_rate" => Some(4),
+        // Scale 4: NUMERIC(5, 4) / NUMERIC(6, 4) / NUMERIC(7, 4) / NUMERIC(19, 4)
+        "interest_rate"
+        | "limit_amount"
+        | "target_percent"
+        | "weight_percent"
+        | "budget_amount" => Some(4),
 
         // Scale 3: NUMERIC(6, 3) / NUMERIC(4, 3)
         "share_percent" | "expected_return" | "geocode_score" | "percent" | "ter_percent" => {
@@ -399,6 +403,8 @@ pub fn pg_numeric_column_scale(sql: &str, col_name: &str) -> Option<u32> {
         "amount" => {
             if sql.contains("goal_manual_contribution") || sql.contains("goal_month_override") {
                 Some(2)
+            } else if sql.contains("transaction_split") {
+                Some(4)
             } else if sql.contains("transaction")
                 || sql.contains("dividend_event")
                 || sql.contains("peer_loan_repayment")

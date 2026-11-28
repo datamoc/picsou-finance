@@ -2,12 +2,22 @@
 
 pub mod dividends;
 pub mod goals;
+pub mod health;
 pub mod history;
+pub mod income;
+pub mod limits;
 pub mod params;
 pub mod peer_loans;
+pub mod performance;
+pub mod planning;
+pub mod portfolios;
 pub mod real_estate;
+pub mod rebalance;
+#[cfg(test)]
+mod roadmap_tests;
 pub mod savings;
 pub mod scpi;
+pub mod taxonomies;
 pub mod validation;
 
 use std::sync::Arc;
@@ -20,10 +30,18 @@ use crate::routes::Routes;
 
 pub fn register(routes: &mut Routes) {
     goals::register(routes);
+    health::register(routes);
+    income::register(routes);
+    limits::register(routes);
+    performance::register(routes);
+    planning::register(routes);
+    portfolios::register(routes);
+    rebalance::register(routes);
     savings::register(routes);
     peer_loans::register(routes);
     real_estate::register(routes);
     scpi::register(routes);
+    taxonomies::register(routes);
     dividends::register(routes);
 }
 

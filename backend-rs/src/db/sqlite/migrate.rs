@@ -25,6 +25,9 @@ const V5_REQUISITION_ERROR_CODE: &str = include_str!("migrations/V5__requisition
 const V6_LINXEA_SIDECAR_SESSION: &str =
     include_str!("migrations/V6__linxea_sidecar_session.sql");
 
+const V7_ROADMAP_FEATURES: &str =
+    include_str!("migrations/V7__roadmap_features.sql");
+
 /// Metadata table tracking applied SQLite schema migrations.
 pub const HISTORY_TABLE: &str = "picsou_sqlite_migrations";
 
@@ -131,6 +134,13 @@ pub fn migrations() -> Vec<SqliteMigration> {
             sql: V6_LINXEA_SIDECAR_SESSION,
             checksum: sha256_checksum(V6_LINXEA_SIDECAR_SESSION),
             mode: MigrationMode::TableRebuild,
+        },
+        SqliteMigration {
+            version: "7",
+            description: "roadmap features schema",
+            sql: V7_ROADMAP_FEATURES,
+            checksum: sha256_checksum(V7_ROADMAP_FEATURES),
+            mode: MigrationMode::Transactional,
         },
     ]
 }

@@ -16,9 +16,12 @@ use rust_decimal::Decimal;
 
 use futures::stream::{self, StreamExt};
 
+use super::circuit_breaker::ProviderCircuitBreaker;
 use super::coingecko::CoinGecko;
+use super::finance_database;
 use super::isin_prices::{IsinPriceService, IsinQuote};
 use super::metals::{self, PreciousMetals};
+use super::providers_extra::ExtraQuoteProviders;
 use super::yahoo::{QuoteProbe, YahooFinance};
 use crate::clock::AppClock;
 use crate::ledger::prices::{self, MAX_FALLBACK_AGE_DAYS, PriceRead, Quote};
@@ -49,6 +52,7 @@ pub struct PriceService {
     coingecko: Arc<CoinGecko>,
     metals: Arc<PreciousMetals>,
     isin: Arc<IsinPriceService>,
+    extra: Option<Arc<ExtraQuoteProviders>>,
     cache: Mutex<HashMap<String, CachedPrice>>,
     retry_after: Mutex<HashMap<String, DateTime<Utc>>>,
 }
@@ -69,9 +73,16 @@ impl PriceService {
             coingecko,
             metals,
             isin,
+            extra: None,
             cache: Mutex::new(HashMap::new()),
             retry_after: Mutex::new(HashMap::new()),
         }
+    }
+
+    pub fn with_extra_providers(mut self, http: reqwest::Client) -> Self {
+        let breaker = Arc::new(ProviderCircuitBreaker::new(self.clock.clone()));
+        self.extra = Some(Arc::new(ExtraQuoteProviders::new(http, breaker)));
+        self
     }
 
     /// A fresh cache entry: Some(price) for a hit, Some(None) for a recent miss.
@@ -127,6 +138,20 @@ impl PriceService {
         }
         if !other.is_empty() {
             result.extend(self.yahoo.prices_eur(&other).await);
+            if let Some(extra) = &self.extra {
+                for symbol in &other {
+                    if result.contains_key(symbol) {
+                        continue;
+                    }
+                    // Try offline FinanceDatabase ISIN->ticker alias first, then resilient secondary providers.
+                    let lookup = finance_database::resolve_isin_offline(symbol)
+                        .map(|c| c.ticker)
+                        .unwrap_or(symbol.as_str());
+                    if let Some(price) = extra.fetch_fallback_price_eur(lookup).await {
+                        result.insert(symbol.clone(), price);
+                    }
+                }
+            }
         }
         result
     }

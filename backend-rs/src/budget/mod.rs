@@ -11,6 +11,7 @@ pub mod categorization;
 pub mod cycle;
 pub mod detection;
 pub mod envelopes;
+pub mod events;
 pub mod flow;
 pub mod jdec;
 pub mod logos;
@@ -19,6 +20,7 @@ pub mod recurring;
 pub mod repo;
 pub mod rules;
 pub mod settings;
+pub mod splits;
 
 use std::sync::{Arc, RwLock};
 
@@ -35,6 +37,8 @@ pub fn register(routes: &mut Routes) {
     categorization::register(routes);
     recurring::register(routes);
     logos::register(routes);
+    splits::register(routes);
+    events::register(routes);
 }
 
 /// A replaceable implementation: the default answers as Java does without the provider, and

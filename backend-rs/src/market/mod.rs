@@ -2,8 +2,10 @@
 
 pub mod boursorama;
 pub mod cerema;
+pub mod circuit_breaker;
 pub mod coingecko;
 pub mod cooldown;
+pub mod finance_database;
 pub mod geocoding;
 pub mod insee;
 pub mod instrument_logos;
@@ -14,6 +16,7 @@ pub mod nasdaq;
 pub mod num;
 pub mod openfigi;
 pub mod prices;
+pub mod providers_extra;
 pub mod quote_page;
 pub mod runners;
 pub mod yahoo;
@@ -54,7 +57,21 @@ pub fn register(routes: &mut Routes) {
         .get("/api/prices", get_prices)
         .get("/api/prices/precious-metals", precious_metals)
         .get("/api/prices/{ticker}/history", price_history_of)
-        .get("/api/prices/{ticker}/intraday", intraday);
+        .get("/api/prices/{ticker}/intraday", intraday)
+        .get("/api/market/search", search_offline_catalog);
+}
+
+async fn search_offline_catalog(
+    _auth: Auth,
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> axum::Json<Vec<&'static finance_database::CatalogInstrument>> {
+    let q = params.get("q").map(String::as_str).unwrap_or("");
+    let limit = params
+        .get("limit")
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(20)
+        .clamp(1, 50);
+    axum::Json(finance_database::search_catalog(q, limit))
 }
 
 /// The market domain's process state (provider clients, caches, cooldowns), held by AppState as
@@ -127,24 +144,27 @@ impl Market {
             coingecko.clone(),
         ));
         Self {
-            prices: Arc::new(PriceService::new(
-                db.clone(),
-                clock.clone(),
-                yahoo.clone(),
-                coingecko.clone(),
-                Arc::new(PreciousMetals::new(
-                    http.clone(),
-                    &config.precious_metals_base_url,
-                    yahoo.clone(),
+            prices: Arc::new(
+                PriceService::new(
+                    db.clone(),
                     clock.clone(),
-                )),
-                Arc::new(IsinPriceService::standard(
-                    http.clone(),
-                    &config.justetf_base_url,
                     yahoo.clone(),
-                    clock.clone(),
-                )),
-            )),
+                    coingecko.clone(),
+                    Arc::new(PreciousMetals::new(
+                        http.clone(),
+                        &config.precious_metals_base_url,
+                        yahoo.clone(),
+                        clock.clone(),
+                    )),
+                    Arc::new(IsinPriceService::standard(
+                        http.clone(),
+                        &config.justetf_base_url,
+                        yahoo.clone(),
+                        clock.clone(),
+                    )),
+                )
+                .with_extra_providers(http.clone()),
+            ),
             openfigi,
             boursorama,
             justetf,

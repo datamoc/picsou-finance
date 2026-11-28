@@ -5,6 +5,8 @@
 //! provider configuration dynamically from `app_setting` so admin changes take effect without
 //! a restart.
 
+pub mod chat;
+pub mod csv_mapper;
 mod parser;
 mod prompt;
 pub(crate) mod provider;
@@ -23,7 +25,10 @@ use crate::budget::ai_job::{
 use crate::crypto::CryptoEncryption;
 use crate::routes::Routes;
 
-pub fn register(_routes: &mut Routes) {}
+pub fn register(routes: &mut Routes) {
+    chat::register(routes);
+    csv_mapper::register(routes);
+}
 
 /// Runtime-configured AI categorizer backed by `app_setting` and `reqwest::Client`.
 ///
