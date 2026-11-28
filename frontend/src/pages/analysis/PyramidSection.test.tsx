@@ -30,8 +30,9 @@ function pyramid(overrides: Partial<WealthPyramid> = {}): WealthPyramid {
       score: 100,
     },
     tiers: [
+      { tier: 'BONDS', valueEur: 20000, actualPercent: 20, targetPercent: 20, targetEur: 20000, gapPercent: 0, accounts: [] },
       { tier: 'REAL_ESTATE', valueEur: 30000, actualPercent: 30, targetPercent: 30, targetEur: 30000, gapPercent: 0, accounts: [] },
-      { tier: 'EQUITY', valueEur: 50000, actualPercent: 50, targetPercent: 50, targetEur: 50000, gapPercent: 0, accounts: [] },
+      { tier: 'EQUITY', valueEur: 30000, actualPercent: 30, targetPercent: 30, targetEur: 30000, gapPercent: 0, accounts: [] },
       { tier: 'CRYPTO', valueEur: 10000, actualPercent: 10, targetPercent: 10, targetEur: 10000, gapPercent: 0, accounts: [] },
       { tier: 'ALTERNATIVE', valueEur: 10000, actualPercent: 10, targetPercent: 10, targetEur: 10000, gapPercent: 0, accounts: [] },
     ],
@@ -54,7 +55,7 @@ describe('PyramidSection', () => {
     render(<PyramidSection pyramid={pyramid()} />)
 
     expect(screen.getByText('100')).toBeInTheDocument()
-    for (const tier of ['REAL_ESTATE', 'EQUITY', 'CRYPTO', 'ALTERNATIVE']) {
+    for (const tier of ['BONDS', 'REAL_ESTATE', 'EQUITY', 'CRYPTO', 'ALTERNATIVE']) {
       expect(screen.getByText(`analysis.tiers.${tier}`)).toBeInTheDocument()
     }
     // The cushion is measured in euros against an absolute target, not as a share of anything.

@@ -73,7 +73,7 @@ around a completion percentage.
 `ProjectionService`, separate from `GoalService` — that class is about progress against targets,
 is already 450+ lines, and has no business knowing what the portfolio is worth.
 
-**Base**: accounts whose `WealthTier` is `EQUITY`, `CRYPTO` or `SAFETY_NET`, valued and
+**Base**: the pyramid's `SAFETY_NET`, `BONDS`, `EQUITY` and `CRYPTO` tiers, valued and
 share-weighted once. Property, loans and alternatives are out: a house does not compound at 7.5%
 a year, and including it would inflate every scenario by whatever it is worth. The base is
 exposed so the screen states what it is projecting from.
@@ -93,7 +93,8 @@ Two defences worth keeping:
 - **Contributions at the end of the month.** At the start, the very first payment earns a month
   of growth it never saw, and the error compounds across the whole horizon.
 
-**A rate per tier, and a rate per plan.** Cash compounds at 2 %, equity and crypto at 7.5 %,
+**A rate per tier, and a rate per plan.** Cash compounds at 2 %, bonds and euro funds at 3 %,
+equity and crypto at 7.5 %,
 property and alternatives at **zero** — a statement rather than an omission, since Picsou does not
 forecast house prices. A plan is credited to the tier of the account it funds, at its own
 `expected_return` when one was given; a plan into an account with a

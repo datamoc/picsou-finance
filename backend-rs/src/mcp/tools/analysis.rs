@@ -46,7 +46,7 @@ pub fn specs() -> Vec<ToolSpec> {
         },
         ToolSpec {
             name: "get_wealth_pyramid",
-            description: "Read-only. The five wealth-pyramid tiers, their weights against the member's allocation targets, and the resulting score.",
+            description: "Read-only. The six wealth-pyramid tiers, their weights against the member's allocation targets, and the resulting score.",
             scope: "analysis:read",
             input_schema: schema_empty(),
         },

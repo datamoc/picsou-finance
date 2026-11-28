@@ -21,8 +21,8 @@ import { formatPercent, parseAmount } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { AllocationTargets, AllocationTargetsRequest, WealthTier } from '@/types/api'
 
-/** The four tiers that carry a percentage target; the safety net is an absolute amount. */
-const TARGET_TIERS = ['REAL_ESTATE', 'EQUITY', 'CRYPTO', 'ALTERNATIVE'] as const
+/** The tiers that carry a percentage target; the safety net is an absolute amount. */
+const TARGET_TIERS = ['BONDS', 'REAL_ESTATE', 'EQUITY', 'CRYPTO', 'ALTERNATIVE'] as const
 type TargetTier = (typeof TARGET_TIERS)[number]
 const EMPTY_CALENDAR: never[] = []
 const UNUSED_TODAY = new Date(0)
@@ -106,6 +106,7 @@ function TargetsForm({
           : ''
   const [months, setMonths] = useState(() => String(targets.safetyNetMonths))
   const [pcts, setPcts] = useState<Record<TargetTier, string>>(() => ({
+    BONDS: String(targets.bondsPct),
     REAL_ESTATE: String(targets.realEstatePct),
     EQUITY: String(targets.equityPct),
     CRYPTO: String(targets.cryptoPct),
@@ -134,6 +135,7 @@ function TargetsForm({
     onSubmit({
       monthlyEssentialExpenses: parsedExpenses,
       safetyNetMonths: parsedMonths,
+      bondsPct: num(pcts.BONDS),
       realEstatePct: num(pcts.REAL_ESTATE),
       equityPct: num(pcts.EQUITY),
       cryptoPct: num(pcts.CRYPTO),

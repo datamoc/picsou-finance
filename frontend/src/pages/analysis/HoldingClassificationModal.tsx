@@ -58,6 +58,7 @@ const COUNTRY_KEYS = [
 
 const TIER_KEYS: WealthTier[] = [
   'SAFETY_NET',
+  'BONDS',
   'REAL_ESTATE',
   'EQUITY',
   'CRYPTO',

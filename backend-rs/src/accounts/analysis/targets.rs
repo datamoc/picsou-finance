@@ -18,6 +18,7 @@ use crate::ledger::model::WealthTier;
 pub struct AllocationProfile {
     pub monthly_essential_expenses: Option<Decimal>,
     pub safety_net_months: i16,
+    pub bonds_pct: Decimal,
     pub real_estate_pct: Decimal,
     pub equity_pct: Decimal,
     pub crypto_pct: Decimal,
@@ -29,8 +30,9 @@ impl Default for AllocationProfile {
         Self {
             monthly_essential_expenses: None,
             safety_net_months: 6,
+            bonds_pct: Decimal::new(2000, 2),
             real_estate_pct: Decimal::new(3000, 2),
-            equity_pct: Decimal::new(5000, 2),
+            equity_pct: Decimal::new(3000, 2),
             crypto_pct: Decimal::new(1000, 2),
             alternative_pct: Decimal::new(1000, 2),
         }
@@ -42,6 +44,7 @@ impl AllocationProfile {
     pub fn target_for(&self, tier: WealthTier) -> Option<Decimal> {
         match tier {
             WealthTier::SafetyNet => None,
+            WealthTier::Bonds => Some(self.bonds_pct),
             WealthTier::RealEstate => Some(self.real_estate_pct),
             WealthTier::Equity => Some(self.equity_pct),
             WealthTier::Crypto => Some(self.crypto_pct),
@@ -56,8 +59,8 @@ pub async fn profile_for<'e>(
     member_id: i64,
 ) -> sqlx::Result<AllocationProfile> {
     let row: Option<AllocationProfile> = db::query_as(
-        "SELECT monthly_essential_expenses, safety_net_months, real_estate_pct, equity_pct, crypto_pct, \
-         alternative_pct FROM member_allocation_profile WHERE member_id = $1",
+        "SELECT monthly_essential_expenses, safety_net_months, bonds_pct, real_estate_pct, equity_pct, \
+         crypto_pct, alternative_pct FROM member_allocation_profile WHERE member_id = $1",
     )
     .bind(member_id)
     .fetch_optional(db)
@@ -67,6 +70,7 @@ pub async fn profile_for<'e>(
             use crate::accounts::scale::column as column_scale;
             p.monthly_essential_expenses = p.monthly_essential_expenses.map(|v| column_scale(v, 2));
             for pct in [
+                &mut p.bonds_pct,
                 &mut p.real_estate_pct,
                 &mut p.equity_pct,
                 &mut p.crypto_pct,
@@ -87,6 +91,8 @@ pub struct AllocationTargetsResponse {
     monthly_essential_expenses: Option<Decimal>,
     safety_net_months: i16,
     #[serde(with = "crate::accounts::jdecimal")]
+    bonds_pct: Decimal,
+    #[serde(with = "crate::accounts::jdecimal")]
     real_estate_pct: Decimal,
     #[serde(with = "crate::accounts::jdecimal")]
     equity_pct: Decimal,
@@ -101,6 +107,7 @@ impl From<AllocationProfile> for AllocationTargetsResponse {
         Self {
             monthly_essential_expenses: p.monthly_essential_expenses,
             safety_net_months: p.safety_net_months,
+            bonds_pct: p.bonds_pct,
             real_estate_pct: p.real_estate_pct,
             equity_pct: p.equity_pct,
             crypto_pct: p.crypto_pct,
@@ -127,6 +134,8 @@ pub struct AllocationTargetsRequest {
     monthly_essential_expenses: Option<Decimal>,
     #[serde(default, deserialize_with = "short")]
     safety_net_months: Option<i16>,
+    /// Optional, unlike the others: a client written before the tier existed sends none.
+    bonds_pct: Option<Decimal>,
     real_estate_pct: Option<Decimal>,
     equity_pct: Option<Decimal>,
     crypto_pct: Option<Decimal>,
@@ -162,6 +171,9 @@ impl Validate for AllocationTargetsRequest {
             Some(m) if m > 24 => errors.add("safetyNetMonths", at_most(lang, 24)),
             _ => {}
         }
+        if self.bonds_pct.is_some_and(|v| v < Decimal::ZERO) {
+            errors.add("bondsPct", at_least(lang, 0));
+        }
         for (field, value) in [
             ("realEstatePct", self.real_estate_pct),
             ("equityPct", self.equity_pct),
@@ -179,7 +191,7 @@ impl Validate for AllocationTargetsRequest {
             self.equity_pct,
             self.crypto_pct,
             self.alternative_pct,
-        ) && [a, b, c, d]
+        ) && [self.bonds_pct.unwrap_or_default(), a, b, c, d]
             .into_iter()
             .try_fold(Decimal::ZERO, Decimal::checked_add)
             != Some(Decimal::ONE_HUNDRED)
@@ -207,6 +219,7 @@ pub async fn replace(
     let saved = AllocationProfile {
         monthly_essential_expenses: request.monthly_essential_expenses,
         safety_net_months: request.safety_net_months.unwrap_or_default(),
+        bonds_pct: request.bonds_pct.unwrap_or_default(),
         real_estate_pct: request.real_estate_pct.unwrap_or_default(),
         equity_pct: request.equity_pct.unwrap_or_default(),
         crypto_pct: request.crypto_pct.unwrap_or_default(),
@@ -215,16 +228,18 @@ pub async fn replace(
     let now = state.clock.now();
     db::query(
         "INSERT INTO member_allocation_profile (member_id, monthly_essential_expenses, safety_net_months, \
-         real_estate_pct, equity_pct, crypto_pct, alternative_pct, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8) ON CONFLICT (member_id) DO UPDATE SET \
+         bonds_pct, real_estate_pct, equity_pct, crypto_pct, alternative_pct, created_at, updated_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9) ON CONFLICT (member_id) DO UPDATE SET \
          monthly_essential_expenses = EXCLUDED.monthly_essential_expenses, \
-         safety_net_months = EXCLUDED.safety_net_months, real_estate_pct = EXCLUDED.real_estate_pct, \
+         safety_net_months = EXCLUDED.safety_net_months, bonds_pct = EXCLUDED.bonds_pct, \
+         real_estate_pct = EXCLUDED.real_estate_pct, \
          equity_pct = EXCLUDED.equity_pct, crypto_pct = EXCLUDED.crypto_pct, \
          alternative_pct = EXCLUDED.alternative_pct, updated_at = EXCLUDED.updated_at",
     )
     .bind(auth.member_id)
     .bind(saved.monthly_essential_expenses)
     .bind(saved.safety_net_months)
+    .bind(saved.bonds_pct)
     .bind(saved.real_estate_pct)
     .bind(saved.equity_pct)
     .bind(saved.crypto_pct)

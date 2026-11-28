@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Bonds and euro funds in the wealth pyramid.** Analysis has a "Bonds & euro funds" tier with
+  its own target (20 % by default, taken from equity). The euro fund of a life-insurance or PER
+  contract goes there instead of counting as equity, as does a contract imported without its
+  lines, and a bond fund can be moved there by hand. Targets saved before keep 0 % bonds until
+  you edit them.
 - **Natixis Interépargne: sign in with a passkey (Picsou Desktop for Windows and Linux).** Type
   your e-mail, then confirm with Windows Hello or your security key on Windows, or with a USB
   security key and its PIN on Linux: no password and no code. Picsou uses a passkey you already

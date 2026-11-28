@@ -22,6 +22,8 @@ const V4_ACCOUNT_TRACKED_ISIN: &str = include_str!("migrations/V4__account_track
 
 const V5_REQUISITION_ERROR_CODE: &str = include_str!("migrations/V5__requisition_error_code.sql");
 
+const V7_WEALTH_TIER_BONDS: &str = include_str!("migrations/V7__wealth_tier_bonds.sql");
+
 /// Metadata table tracking applied SQLite schema migrations.
 pub const HISTORY_TABLE: &str = "picsou_sqlite_migrations";
 
@@ -121,6 +123,13 @@ pub fn migrations() -> Vec<SqliteMigration> {
             sql: V5_REQUISITION_ERROR_CODE,
             checksum: sha256_checksum(V5_REQUISITION_ERROR_CODE),
             mode: MigrationMode::Transactional,
+        },
+        SqliteMigration {
+            version: "7",
+            description: "wealth tier bonds",
+            sql: V7_WEALTH_TIER_BONDS,
+            checksum: sha256_checksum(V7_WEALTH_TIER_BONDS),
+            mode: MigrationMode::TableRebuild,
         },
     ]
 }
@@ -731,6 +740,76 @@ mod tests {
         })
         .expect("v3 backfill");
         db.verify_schema().expect("schema parity after V3");
+    }
+
+    #[test]
+    fn v7_keeps_every_row_and_accepts_the_bonds_tier() {
+        let db = SqliteDb::open_in_memory().expect("open in-memory SQLite");
+        let all = migrations();
+        let before_v7 = all.iter().position(|m| m.version == "7").expect("V7");
+        db.with_conn(|conn| {
+            assert_eq!(migrate_with(conn, &all[..before_v7])?, before_v7);
+            conn.execute_batch(
+                "INSERT INTO family_member (id, display_name, is_managed) VALUES (1, 'Doe', 0);
+                 INSERT INTO account (id, name, type, currency, current_balance, is_manual, member_id)
+                     VALUES (10, 'Contract', 'ASSURANCE_VIE', 'EUR', '0', 1, 1);
+                 INSERT INTO account_holding (id, account_id, ticker, quantity, provider_wealth_tier, isin)
+                     VALUES (7, 10, 'PSUC', '2', 'REAL_ESTATE', 'FR0010135103');
+                 INSERT INTO holding_classification (member_id, ticker, wealth_tier, sector_key)
+                     VALUES (1, 'PSUC', 'EQUITY', 'technology');
+                 INSERT INTO member_allocation_profile
+                     (member_id, real_estate_pct, equity_pct, crypto_pct, alternative_pct)
+                     VALUES (1, '40.00', '40.00', '10.00', '10.00');",
+            )?;
+
+            assert_eq!(migrate_with(conn, &all)?, all.len() - before_v7);
+
+            let holding: (i64, String, Option<String>, Option<String>) = conn.query_row(
+                "SELECT id, ticker, provider_wealth_tier, isin FROM account_holding",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )?;
+            assert_eq!(
+                holding,
+                (
+                    7,
+                    "PSUC".to_owned(),
+                    Some("REAL_ESTATE".to_owned()),
+                    Some("FR0010135103".to_owned())
+                )
+            );
+            let profile: (String, String) = conn.query_row(
+                "SELECT equity_pct, bonds_pct FROM member_allocation_profile",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )?;
+            assert_eq!(profile, ("40.00".to_owned(), "0".to_owned()));
+            let sector: String = conn.query_row(
+                "SELECT sector_key FROM holding_classification",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(sector, "technology");
+
+            conn.execute_batch(
+                "UPDATE account_holding SET provider_wealth_tier = 'BONDS';
+                 UPDATE holding_classification SET wealth_tier = 'BONDS';
+                 UPDATE member_allocation_profile SET bonds_pct = '20.00', equity_pct = '20.00';",
+            )?;
+            let unbalanced = conn
+                .execute("UPDATE member_allocation_profile SET bonds_pct = '30.00'", [])
+                .expect_err("a sum above 100 must be rejected");
+            assert!(unbalanced.to_string().contains("CHECK constraint failed"));
+            let unknown = conn
+                .execute("UPDATE holding_classification SET wealth_tier = 'GOLD'", [])
+                .expect_err("an unknown tier must be rejected");
+            assert!(unknown.to_string().contains("CHECK constraint failed"));
+            Ok(())
+        })
+        .expect("v7 rebuild");
+        db.verify_schema().expect("schema parity after V7");
+        let integrity = db.check_integrity().expect("integrity check after V7");
+        assert!(integrity.integrity_ok, "{:?}", integrity.integrity_messages);
     }
 
     #[test]

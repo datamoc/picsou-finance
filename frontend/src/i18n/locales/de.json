@@ -353,6 +353,7 @@
     },
     "tiers": {
       "SAFETY_NET": "Notgroschen",
+      "BONDS": "Anleihen & Euro-Fonds",
       "REAL_ESTATE": "Immobilien",
       "EQUITY": "Aktien & ETFs",
       "CRYPTO": "Krypto",
@@ -401,7 +402,7 @@
       "months": "Zu deckende Monate",
       "allocation": "Zielaufteilung des Rests",
       "sum": "Summe {{value}} / {{max}}",
-      "allocationHint": "Die vier Prozentsätze müssen zusammen 100% ergeben."
+      "allocationHint": "Die fünf Prozentsätze müssen zusammen 100% ergeben."
     },
     "targetAmount": "Ziel",
     "diversification": {

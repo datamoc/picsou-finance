@@ -11,6 +11,7 @@ import { AXIS_PROPS, AXIS_PROPS_FLUSH } from '@/lib/chart-axis'
 /** Bottom to top, heaviest first — the order the pyramid itself reads in. */
 const TIER_ORDER: WealthTier[] = [
   'SAFETY_NET',
+  'BONDS',
   'REAL_ESTATE',
   'EQUITY',
   'CRYPTO',
@@ -19,6 +20,7 @@ const TIER_ORDER: WealthTier[] = [
 
 const TIER_COLOR: Record<WealthTier, string> = {
   SAFETY_NET: SLICE_PALETTE[5],
+  BONDS: SLICE_PALETTE[4],
   REAL_ESTATE: SLICE_PALETTE[1],
   EQUITY: SLICE_PALETTE[0],
   CRYPTO: SLICE_PALETTE[3],

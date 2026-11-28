@@ -25,8 +25,12 @@ use crate::ledger::{holdings, valuation};
 
 const SCALE: u32 = 8;
 
-/// The tiers the four target percentages divide; the safety net is measured in euros instead.
-pub const INVESTMENT_TIERS: [WealthTier; 4] = [
+/// How many tiers there are, for the arrays indexed by `index`.
+pub const TIER_COUNT: usize = WealthTier::ALL.len();
+
+/// The tiers the target percentages divide; the safety net is measured in euros instead.
+pub const INVESTMENT_TIERS: [WealthTier; 5] = [
+    WealthTier::Bonds,
     WealthTier::RealEstate,
     WealthTier::Equity,
     WealthTier::Crypto,
@@ -143,8 +147,8 @@ pub struct Alert {
 /// The sums the account loop produces, by tier ordinal.
 #[derive(Default)]
 struct Tally {
-    by_tier: [Decimal; 5],
-    accounts_by_tier: [Vec<TierAccount>; 5],
+    by_tier: [Decimal; TIER_COUNT],
+    accounts_by_tier: [Vec<TierAccount>; TIER_COUNT],
     total_assets: Decimal,
     daily_cash: Decimal,
     crypto_top_ten: Decimal,
@@ -186,6 +190,7 @@ pub async fn pyramid(
         }
         let share = shares.get(&account.id).copied().unwrap_or_default();
         let account_tier = WealthTier::of(account.account_type);
+        let uninvested_tier = WealthTier::of_uninvested(account.account_type);
         let current_account = account.account_type == AccountType::Checking;
         let live = valuation::valuation(&mut *conn, prices, account, today)
             .await?
@@ -193,7 +198,7 @@ pub async fn pyramid(
         let account_total = weigh(live, share);
 
         if !holdings::exists_for_readable_account(&mut *conn, account.id, member_id).await? {
-            let tier = tracked.get(&account.id).map_or(account_tier, |key| {
+            let tier = tracked.get(&account.id).map_or(uninvested_tier, |key| {
                 tracked_fund::tier(key, &classifications)
             });
             tally.total_assets += account_total;
@@ -223,7 +228,7 @@ pub async fn pyramid(
         } else {
             registered_coins(&mut *conn, &line_tickers).await?
         };
-        let mut per_tier: [Option<Decimal>; 5] = [None; 5];
+        let mut per_tier: [Option<Decimal>; TIER_COUNT] = [None; TIER_COUNT];
         let mut lines_total = Decimal::ZERO;
         for line in &lines {
             let Some(current) = line.current_value_eur else {
@@ -247,10 +252,10 @@ pub async fn pyramid(
                 }
             }
         }
-        // Cash inside the envelope and unpriced lines stay with the account's own tier.
+        // Cash inside the envelope (a contract's euro fund) and unpriced lines.
         let residual = account_total - lines_total;
         if !residual.is_zero() {
-            let slot = &mut per_tier[index(account_tier)];
+            let slot = &mut per_tier[index(uninvested_tier)];
             *slot = Some(slot.map_or(residual, |v| v + residual));
         }
         tally.total_assets += account_total;
@@ -407,7 +412,7 @@ fn assemble(
 fn alerts(
     cushion_accounts: &[TierAccount],
     tiers: &[TierLine],
-    by_tier: &[Decimal; 5],
+    by_tier: &[Decimal; TIER_COUNT],
     total_assets: Decimal,
     excess: Decimal,
     coverage: Option<Decimal>,

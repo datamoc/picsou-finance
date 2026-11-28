@@ -317,6 +317,7 @@ column	louve_connection	status	varchar
 column	louve_connection	token_state	text
 column	louve_connection	updated_at	timestamptz
 column	member_allocation_profile	alternative_pct	numeric
+column	member_allocation_profile	bonds_pct	numeric
 column	member_allocation_profile	created_at	timestamptz
 column	member_allocation_profile	crypto_pct	numeric
 column	member_allocation_profile	equity_pct	numeric

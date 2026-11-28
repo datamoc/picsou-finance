@@ -364,6 +364,7 @@
     },
     "tiers": {
       "SAFETY_NET": "Emergency fund",
+      "BONDS": "Bonds & euro funds",
       "REAL_ESTATE": "Real estate",
       "EQUITY": "Stocks & ETFs",
       "CRYPTO": "Crypto",
@@ -412,7 +413,7 @@
       "months": "Months of expenses to cover",
       "allocation": "Target split of the rest",
       "sum": "Total {{value}} / {{max}}",
-      "allocationHint": "The four percentages must add up to 100%."
+      "allocationHint": "The five percentages must add up to 100%."
     },
     "targetAmount": "target",
     "diversification": {

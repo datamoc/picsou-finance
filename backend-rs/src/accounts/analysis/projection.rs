@@ -11,7 +11,7 @@ use serde::Serialize;
 
 use super::inflow;
 use super::math::{jmax, scale2};
-use super::pyramid::WealthPyramidResponse;
+use super::pyramid::{TIER_COUNT, WealthPyramidResponse};
 use crate::accounts::classification::overrides_of;
 use crate::accounts::tracked_fund;
 use crate::db;
@@ -25,10 +25,11 @@ const MAX_YEARS: i64 = 40;
 /// MathContext(20, HALF_UP), the precision every monthly compounding step is rounded to.
 const DIGITS: u32 = 20;
 
-/// The headline curve compounds the cushion, equity and crypto; property does not grow at an
-/// equity rate and would inflate every scenario.
-const INVESTABLE: [WealthTier; 3] = [
+/// The headline curve compounds the cushion, bonds, equity and crypto; property does not grow at
+/// an equity rate and would inflate every scenario.
+const INVESTABLE: [WealthTier; 4] = [
     WealthTier::SafetyNet,
+    WealthTier::Bonds,
     WealthTier::Equity,
     WealthTier::Crypto,
 ];
@@ -47,6 +48,7 @@ fn assumptions() -> [(&'static str, Decimal); 4] {
 fn tier_rate(tier: WealthTier) -> Decimal {
     match tier {
         WealthTier::SafetyNet => Decimal::new(20, 1),
+        WealthTier::Bonds => Decimal::new(30, 1),
         WealthTier::Equity | WealthTier::Crypto => Decimal::new(75, 1),
         WealthTier::RealEstate | WealthTier::Alternative => Decimal::ZERO,
     }
@@ -164,9 +166,9 @@ pub async fn project(
     today: NaiveDate,
 ) -> sqlx::Result<ProjectionResponse> {
     let years = requested_years.clamp(MIN_YEARS, MAX_YEARS);
-    let mut mix = [Decimal::ZERO; 5];
+    let mut mix = [Decimal::ZERO; TIER_COUNT];
     mix[index(WealthTier::SafetyNet)] = pyramid.safety_net.value_eur;
-    let mut targets: [Option<Decimal>; 5] = [None; 5];
+    let mut targets: [Option<Decimal>; TIER_COUNT] = [None; TIER_COUNT];
     for line in &pyramid.tiers {
         mix[index(line.tier)] = line.value_eur;
         targets[index(line.tier)] = Some(line.target_percent);
@@ -272,7 +274,7 @@ async fn plans_for(conn: &mut DbHandle<'_>, member_id: i64) -> sqlx::Result<Vec<
     Ok(plans)
 }
 
-fn pots_of(mix: &[Decimal; 5], tiers: &[WealthTier]) -> Vec<Pot> {
+fn pots_of(mix: &[Decimal; TIER_COUNT], tiers: &[WealthTier]) -> Vec<Pot> {
     tiers
         .iter()
         .map(|t| Pot {
@@ -298,7 +300,7 @@ fn point(month: Month, value: Decimal, contributed: Decimal) -> Point {
 fn scenario(
     key: &'static str,
     delta: Decimal,
-    mix: &[Decimal; 5],
+    mix: &[Decimal; TIER_COUNT],
     plans: &[Plan],
     start: Month,
     years: i64,
@@ -346,7 +348,7 @@ fn scenario(
 
 /// The blended rate the scenario works out to, weighted by capital in.
 fn effective_rate(
-    mix: &[Decimal; 5],
+    mix: &[Decimal; TIER_COUNT],
     funding: &[&Plan],
     paid_in: &[(usize, Decimal)],
     delta: Decimal,
@@ -374,8 +376,8 @@ fn effective_rate(
 }
 
 fn allocation(
-    mix: &[Decimal; 5],
-    targets: &[Option<Decimal>; 5],
+    mix: &[Decimal; TIER_COUNT],
+    targets: &[Option<Decimal>; TIER_COUNT],
     plans: &[Plan],
     start: Month,
     years: i64,
@@ -403,8 +405,12 @@ fn allocation(
     points
 }
 
-fn allocation_point(month: Month, pots: &[Pot], targets: &[Option<Decimal>; 5]) -> AllocationPoint {
-    let mut by_tier = [Decimal::ZERO; 5];
+fn allocation_point(
+    month: Month,
+    pots: &[Pot],
+    targets: &[Option<Decimal>; TIER_COUNT],
+) -> AllocationPoint {
+    let mut by_tier = [Decimal::ZERO; TIER_COUNT];
     for pot in pots {
         by_tier[index(pot.tier)] += pot.amount;
     }

@@ -2423,7 +2423,7 @@ export interface RealizedPnlResponse {
 
 // --- Analysis: the investment pyramid ---
 
-export type WealthTier = 'SAFETY_NET' | 'REAL_ESTATE' | 'EQUITY' | 'CRYPTO' | 'ALTERNATIVE'
+export type WealthTier = 'SAFETY_NET' | 'BONDS' | 'REAL_ESTATE' | 'EQUITY' | 'CRYPTO' | 'ALTERNATIVE'
 
 export interface TierAccount {
   accountId: number
@@ -2494,6 +2494,7 @@ export interface WealthPyramid {
 export interface AllocationTargets {
   monthlyEssentialExpenses: number | null
   safetyNetMonths: number
+  bondsPct: number
   realEstatePct: number
   equityPct: number
   cryptoPct: number
