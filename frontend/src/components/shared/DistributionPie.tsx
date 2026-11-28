@@ -119,18 +119,60 @@ function AllocationTreemap({ data }: { data: DistributionItem[] }) {
   )
 }
 
+type DistributionBasis = 'net' | 'gross'
+
 export function DistributionPie({ data, className }: DistributionPieProps) {
   const { t } = useTranslation()
+  const [basis, setBasis] = useState<DistributionBasis>('net')
+
+  const basisData = useMemo(() => {
+    const hasLinkedDebt = data.some(item => (item.linkedDebtEur ?? 0) > 0)
+    if (basis === 'gross' || !hasLinkedDebt) return data
+    const adjusted = data.map(item => ({
+      ...item,
+      balanceEur: Math.max(0, item.balanceEur - Math.max(0, item.linkedDebtEur ?? 0)),
+    }))
+    const total = adjusted.reduce((sum, item) => sum + item.balanceEur, 0)
+    return adjusted.map(item => ({
+      ...item,
+      percentage: total > 0 ? (item.balanceEur / total) * 100 : 0,
+    }))
+  }, [data, basis])
+
   const displayData = useMemo(
-    () => disambiguateDistributionNames(data, type => t(accountTypeLabelKey(type))),
-    [data, t],
+    () => disambiguateDistributionNames(basisData, type => t(accountTypeLabelKey(type))),
+    [basisData, t],
   )
 
   return (
     <Card className={cn('h-[420px]', className)}>
       <Tabs defaultValue="distribution" className="h-full w-full gap-0">
         <CardHeader className="shrink-0 space-y-2.5">
-          <CardTitle>{t('dashboard.distributionTitle')}</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>{t('dashboard.distributionTitle')}</CardTitle>
+            <div
+              role="group"
+              aria-label={t('dashboard.distributionBasis.label')}
+              className="inline-flex items-center gap-0.5 rounded-lg border border-border/60 bg-background/80 p-0.5"
+            >
+              {(['net', 'gross'] as const).map(mode => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={basis === mode}
+                  onClick={() => setBasis(mode)}
+                  className={cn(
+                    'inline-flex h-6 items-center justify-center whitespace-nowrap rounded-md px-2.5 text-xs font-medium transition-[background-color,color]',
+                    basis === mode
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {t(`dashboard.distributionBasis.${mode}`)}
+                </button>
+              ))}
+            </div>
+          </div>
           <TabsList>
             <TabsTrigger value="distribution">{t('dashboard.distribution')}</TabsTrigger>
             <TabsTrigger value="allocation">{t('dashboard.allocation')}</TabsTrigger>

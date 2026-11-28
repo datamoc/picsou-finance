@@ -7,6 +7,7 @@ export interface DistributionItem {
   balanceEur: number
   percentage: number
   accountType: AccountType
+  linkedDebtEur?: number | null
 }
 
 function normalizedName(name: string): string {

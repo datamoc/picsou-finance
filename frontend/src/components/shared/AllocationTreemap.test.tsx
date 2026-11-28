@@ -46,3 +46,71 @@ describe('AllocationTreemap', () => {
     expect(tile).not.toHaveClass('overflow-hidden')
   })
 })
+
+describe('DistributionPie net/gross toggle', () => {
+  const leveragedData: DistributionItem[] = [
+    {
+      accountId: 10,
+      name: 'Appartement',
+      accountType: 'REAL_ESTATE',
+      color: '#a855f7',
+      balanceEur: 900_000,
+      linkedDebtEur: 500_000,
+      percentage: 90,
+    },
+    {
+      accountId: 20,
+      name: 'PEA',
+      accountType: 'PEA',
+      color: '#22c55e',
+      balanceEur: 100_000,
+      percentage: 10,
+    },
+  ]
+
+  it('defaults to net equity (deducting linked loans) and switches to gross on click', () => {
+    render(<DistributionPie data={leveragedData} />)
+
+    const netBtn = screen.getByRole('button', { name: 'dashboard.distributionBasis.net' })
+    const grossBtn = screen.getByRole('button', { name: 'dashboard.distributionBasis.gross' })
+    expect(netBtn).toHaveAttribute('aria-pressed', 'true')
+    expect(grossBtn).toHaveAttribute('aria-pressed', 'false')
+
+    // Net: 400k / (400k + 100k) = 80.0% and 100k / 500k = 20.0%
+    expect(screen.getByText('80.0%')).toBeInTheDocument()
+    expect(screen.getByText('20.0%')).toBeInTheDocument()
+
+    // Switch to Gross: 900k / 1000k = 90.0% and 100k / 1000k = 10.0%
+    fireEvent.click(grossBtn)
+    expect(grossBtn).toHaveAttribute('aria-pressed', 'true')
+    expect(netBtn).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByText('90.0%')).toBeInTheDocument()
+    expect(screen.getByText('10.0%')).toBeInTheDocument()
+  })
+
+  it('clamps net equity at zero when linked debt exceeds asset value', () => {
+    const underwater: DistributionItem[] = [
+      {
+        accountId: 11,
+        name: 'Bien',
+        accountType: 'REAL_ESTATE',
+        color: '#a855f7',
+        balanceEur: 200_000,
+        linkedDebtEur: 250_000,
+        percentage: 66.7,
+      },
+      {
+        accountId: 21,
+        name: 'Livret',
+        accountType: 'SAVINGS',
+        color: '#22c55e',
+        balanceEur: 100_000,
+        percentage: 33.3,
+      },
+    ]
+
+    render(<DistributionPie data={underwater} />)
+    expect(screen.getByText('0.0%')).toBeInTheDocument()
+    expect(screen.getByText('100.0%')).toBeInTheDocument()
+  })
+})

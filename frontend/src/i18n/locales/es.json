@@ -170,7 +170,12 @@
       "1Y": "Últimos 12 meses",
       "ALL": "Todo el historial"
     },
-    "distributionTitle": "Distribución de cuentas"
+    "distributionTitle": "Distribución de cuentas",
+    "distributionBasis": {
+      "label": "Base de valoración",
+      "net": "Neto",
+      "gross": "Bruto"
+    }
   },
   "accounts": {
     "corumLifeOperation": {

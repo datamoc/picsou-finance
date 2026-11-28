@@ -170,7 +170,12 @@
       "1Y": "Last 12 months",
       "ALL": "All history"
     },
-    "distributionTitle": "Account breakdown"
+    "distributionTitle": "Account breakdown",
+    "distributionBasis": {
+      "label": "Valuation basis",
+      "net": "Net",
+      "gross": "Gross"
+    }
   },
   "transactions": {
     "detail": "Transaction detail",

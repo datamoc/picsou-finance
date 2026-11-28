@@ -38,6 +38,7 @@ pub struct DashboardResponse {
     goal_summaries: Vec<serde_json::Value>,
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DistributionItem {
@@ -51,6 +52,9 @@ pub struct DistributionItem {
     percentage: Decimal,
     account_type: AccountType,
     has_holdings: bool,
+    /// Remaining balance (EUR, member-weighted) of visible loans linked to this asset.
+    #[serde(with = "jdecimal::option")]
+    linked_debt_eur: Option<Decimal>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -104,6 +108,7 @@ fn distribution(
     divisor: Decimal,
     holding_counts: &HashMap<i64, usize>,
     values: &HashMap<i64, Decimal>,
+    linked_debts: &HashMap<i64, Decimal>,
     liabilities_only: bool,
 ) -> Vec<DistributionItem> {
     accounts
@@ -113,6 +118,10 @@ fn distribution(
         })
         .map(|a| {
             let balance = values.get(&a.id).copied().unwrap_or(Decimal::ZERO);
+            let linked_debt_eur = (!liabilities_only)
+                .then(|| linked_debts.get(&a.id).copied())
+                .flatten()
+                .filter(|d| *d > Decimal::ZERO);
             DistributionItem {
                 account_id: a.id,
                 name: a.name.clone(),
@@ -121,6 +130,7 @@ fn distribution(
                 percentage: percentage(balance, divisor),
                 account_type: a.account_type,
                 has_holdings: holding_counts.get(&a.id).copied().unwrap_or(0) > 0,
+                linked_debt_eur,
             }
         })
         .collect()
@@ -212,6 +222,21 @@ pub async fn get_dashboard(
     )
     .await?;
 
+    let debts = &batch.debts;
+    // Sum visible, member-weighted loan balances by the asset account each loan finances.
+    let mut linked_debt_by_asset: HashMap<i64, Decimal> = HashMap::new();
+    for a in &top_level_accounts {
+        if a.account_type.is_liability()
+            && let Some(linked_id) = debts.get(&a.id).and_then(|d| d.linked_account_id)
+        {
+            let owed = values.get(&a.id).copied().unwrap_or(Decimal::ZERO).abs();
+            if owed > Decimal::ZERO {
+                let entry = linked_debt_by_asset.entry(linked_id).or_insert(Decimal::ZERO);
+                *entry = add(*entry, owed);
+            }
+        }
+    }
+
     let all: Vec<&Account> = visible.iter().collect();
     let distributable: Vec<&Account> = visible
         .iter()
@@ -226,12 +251,26 @@ pub async fn get_dashboard(
         distributable_total,
         &holding_counts,
         &values,
+        &linked_debt_by_asset,
         false,
     );
-    let assets = distribution(&all, total_assets, &holding_counts, &values, false);
-    let raw_liabilities = distribution(&all, total_liabilities, &holding_counts, &values, true);
+    let assets = distribution(
+        &all,
+        total_assets,
+        &holding_counts,
+        &values,
+        &linked_debt_by_asset,
+        false,
+    );
+    let raw_liabilities = distribution(
+        &all,
+        total_liabilities,
+        &holding_counts,
+        &values,
+        &linked_debt_by_asset,
+        true,
+    );
 
-    let debts = &batch.debts;
     let by_id: HashMap<i64, &Account> = visible.iter().map(|a| (a.id, a)).collect();
     let mut total_monthly: Option<Decimal> = None;
     let mut entries = Vec::with_capacity(raw_liabilities.len());
@@ -293,4 +332,75 @@ pub async fn get_dashboard(
         liabilities: entries,
         goal_summaries,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_account(id: i64, name: &str, account_type: AccountType) -> Account {
+        Account {
+            id,
+            member_id: 1,
+            name: name.to_owned(),
+            account_type,
+            provider: None,
+            currency: "EUR".to_owned(),
+            current_balance: Decimal::ZERO,
+            cash_balance: None,
+            last_synced_at: None,
+            payment_due_amount: None,
+            payment_due_date: None,
+            card_nature: None,
+            reward_points: None,
+            external_account_id: None,
+            is_manual: true,
+            color: "#3b82f6".to_owned(),
+            iban: None,
+            ticker: None,
+            logo_url: None,
+            logo_key: None,
+            institution_name: None,
+            institution_domain: None,
+            requisition_id: None,
+            opened_at: None,
+            provider_invested_eur: None,
+            provider_paid_in_eur: None,
+            scheduled_payment_eur: None,
+            scheduled_payment_cadence: None,
+            deleted_at: None,
+            parent_account_id: None,
+            hidden: false,
+            tracked_isin: None,
+            created_at: chrono::DateTime::UNIX_EPOCH,
+            updated_at: chrono::DateTime::UNIX_EPOCH,
+        }
+    }
+
+    #[test]
+    fn distribution_attaches_linked_debt_only_to_financed_assets() {
+        let property = test_account(1, "Appartement", AccountType::RealEstate);
+        let pea = test_account(2, "PEA", AccountType::Pea);
+        let accounts = vec![&property, &pea];
+        let holding_counts = HashMap::from([(1, 0), (2, 3)]);
+        let values = HashMap::from([(1, Decimal::new(900_000, 0)), (2, Decimal::new(100_000, 0))]);
+        let linked_debts = HashMap::from([(1, Decimal::new(512_683_03, 2))]);
+
+        let items = distribution(
+            &accounts,
+            Decimal::new(1_000_000, 0),
+            &holding_counts,
+            &values,
+            &linked_debts,
+            false,
+        );
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].linked_debt_eur, Some(Decimal::new(512_683_03, 2)));
+        assert_eq!(items[1].linked_debt_eur, None);
+
+        let json_prop = serde_json::to_value(&items[0]).unwrap();
+        let json_pea = serde_json::to_value(&items[1]).unwrap();
+        assert_eq!(json_prop["linkedDebtEur"], serde_json::json!(512_683.03));
+        assert!(json_pea.get("linkedDebtEur").is_none());
+    }
 }

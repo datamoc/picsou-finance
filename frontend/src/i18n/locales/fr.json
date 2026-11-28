@@ -170,7 +170,12 @@
       "1Y": "12 derniers mois",
       "ALL": "Tout l'historique"
     },
-    "distributionTitle": "Répartition des comptes"
+    "distributionTitle": "Répartition des comptes",
+    "distributionBasis": {
+      "label": "Base de valorisation",
+      "net": "Net",
+      "gross": "Brut"
+    }
   },
   "transactions": {
     "detail": "Détail de la transaction",

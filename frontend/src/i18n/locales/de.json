@@ -170,7 +170,12 @@
       "1Y": "Letzte 12 Monate",
       "ALL": "Gesamter Verlauf"
     },
-    "distributionTitle": "Kontoverteilung"
+    "distributionTitle": "Kontoverteilung",
+    "distributionBasis": {
+      "label": "Bewertungsbasis",
+      "net": "Netto",
+      "gross": "Brutto"
+    }
   },
   "accounts": {
     "corumLifeOperation": {

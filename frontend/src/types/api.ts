@@ -905,6 +905,8 @@ export interface DashboardDistributionItem {
   percentage: number
   accountType: AccountType
   hasHoldings: boolean
+  /** Remaining balance (EUR) of loans linked to this asset, when any. */
+  linkedDebtEur?: number | null
 }
 
 export interface DashboardData {

@@ -16,15 +16,30 @@ export function mockDashboard(accounts: Account[]): DashboardData {
   const totalAssets = round2(assets.reduce((sum, a) => sum + a.currentBalanceEur, 0))
   const totalLiabilities = round2(liabilities.reduce((sum, a) => sum + Math.abs(a.currentBalanceEur), 0))
 
-  const toItem = (a: Account, divisor: number) => ({
-    accountId: a.id,
-    name: a.name,
-    color: a.color,
-    balanceEur: a.currentBalanceEur,
-    percentage: divisor > 0 ? Math.round((a.currentBalanceEur / divisor) * 1000) / 10 : 0,
-    accountType: a.type,
-    hasHoldings: ['PEA', 'COMPTE_TITRES', 'CRYPTO'].includes(a.type),
-  })
+  const linkedDebtByAsset = new Map<number, number>()
+  for (const a of liabilities) {
+    const linkedId = a.debt?.linkedAccountId
+    if (linkedId != null) {
+      const owed = Math.abs(a.currentBalanceEur)
+      if (owed > 0) {
+        linkedDebtByAsset.set(linkedId, round2((linkedDebtByAsset.get(linkedId) ?? 0) + owed))
+      }
+    }
+  }
+
+  const toItem = (a: Account, divisor: number) => {
+    const linkedDebtEur = linkedDebtByAsset.get(a.id)
+    return {
+      accountId: a.id,
+      name: a.name,
+      color: a.color,
+      balanceEur: a.currentBalanceEur,
+      percentage: divisor > 0 ? Math.round((a.currentBalanceEur / divisor) * 1000) / 10 : 0,
+      accountType: a.type,
+      hasHoldings: ['PEA', 'COMPTE_TITRES', 'CRYPTO'].includes(a.type),
+      ...(linkedDebtEur != null && linkedDebtEur > 0 ? { linkedDebtEur } : {}),
+    }
+  }
 
   // The donut excludes receivables, so its divisor is the included assets only; the wealth
   // modes and the history curve use `assets`, which keeps the peer loans.
