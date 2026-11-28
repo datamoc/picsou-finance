@@ -20,7 +20,11 @@ import { useAppStore } from '@/stores/app-store'
 export function useMoney(): MoneyFormatter {
   const { i18n } = useTranslation()
   const hidden = useAppStore((s) => s.hideAmounts)
+  const compactNumbers = useAppStore((s) => s.compactNumbers)
   const locale = localeFromLanguage(i18n.resolvedLanguage ?? i18n.language)
 
-  return useMemo(() => makeMoneyFormatter({ hidden, locale }), [hidden, locale])
+  return useMemo(
+    () => makeMoneyFormatter({ hidden, locale, compactNumbers }),
+    [hidden, locale, compactNumbers],
+  )
 }

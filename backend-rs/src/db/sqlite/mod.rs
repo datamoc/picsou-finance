@@ -19,6 +19,7 @@ pub mod error;
 pub mod export_pg;
 pub mod migrate;
 pub mod seed;
+pub mod vault;
 
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
@@ -436,6 +437,11 @@ impl SqliteDb {
                 .map_err(error::rusqlite_to_sqlx)
         })
         .await
+    }
+
+    /// Returns the filesystem path of this SQLite database, or `None` for in-memory databases.
+    pub fn file_path(&self) -> Option<&Path> {
+        self.file_path.as_deref()
     }
 
     /// Returns a stable identifier for this SQLite database (file path or unique in-memory address).

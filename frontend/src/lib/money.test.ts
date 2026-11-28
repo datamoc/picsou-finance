@@ -122,6 +122,16 @@ describe('compact', () => {
     expect(masked.compact(1_500_000)).not.toMatch(/\d/)
     expect(masked.compact(250)).not.toMatch(/\d/)
   })
+
+  it('compacts amount() automatically when compactNumbers is enabled while keeping quotes exact and privacy masked', () => {
+    const compactFmt = makeMoneyFormatter({ hidden: false, locale: 'fr-FR', compactNumbers: true })
+    const compactMasked = makeMoneyFormatter({ hidden: true, locale: 'fr-FR', compactNumbers: true })
+    expect(compactFmt.amount(142_350)).toMatch(/k\s*€/)
+    expect(compactFmt.amount(1_250_000)).toMatch(/M\s*€/)
+    expect(compactFmt.amount(250)).toContain('250')
+    expect(compactFmt.quote(142_350)).not.toMatch(/k\s*€/)
+    expect(compactMasked.amount(142_350)).not.toMatch(/\d/)
+  })
 })
 
 describe('tick', () => {

@@ -33,7 +33,8 @@
     "category": "Category",
     "done": "Done",
     "labelColon": "{{label}}:",
-    "notFound": "Item not found."
+    "notFound": "Item not found.",
+    "exportSvg": "Export as SVG"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -2650,7 +2651,45 @@
     "profilePhotoInvalid": "Please select a valid image (PNG, JPG, or WebP).",
     "usernameTooShort": "Username must be at least 3 characters.",
     "usernameInvalidChars": "Use only letters, numbers, hyphens, or underscores.",
-    "usernameTaken": "This username is already taken."
+    "usernameTaken": "This username is already taken.",
+    "compactNumbers": "Number format",
+    "compactNumbersFull": "Full",
+    "compactNumbersCompact": "Compact",
+    "encryptedBackup": {
+      "title": "Encrypted backups",
+      "description": "Export a password-protected encrypted copy of your local database or restore an existing backup.",
+      "storageStatus": "Local storage",
+      "keystoreLabel": "OS keystore",
+      "vaultLabel": "Database vault",
+      "sqliteOnly": "Encrypted SQLite backups are only available in standalone SQLite mode.",
+      "exportTitle": "Create encrypted backup",
+      "exportDesc": "Authenticated AES-256-GCM encryption with PBKDF2-HMAC-SHA256 key derivation.",
+      "passphrase": "Encryption passphrase",
+      "passphrasePlaceholder": "At least 8 characters",
+      "confirmPassphrase": "Confirm passphrase",
+      "passphraseTooShort": "Passphrase must be at least 8 characters.",
+      "passphraseMismatch": "Passphrases do not match.",
+      "exportButton": "Download backup",
+      "exportSuccess": "Encrypted backup downloaded.",
+      "restoreTitle": "Verify or restore a backup",
+      "restoreDesc": "Verify integrity before staging a restore for the next application launch.",
+      "chooseFile": "Choose .picsou-backup file",
+      "verifyButton": "Verify",
+      "restoreButton": "Stage restore",
+      "verifyOk": "Valid backup ({{tables}} tables verified).",
+      "verifyFailed": "Integrity verification failed.",
+      "restoreStaged": "Restore staged: restart Picsou to apply it."
+    },
+    "profiles": {
+      "title": "Isolated profiles",
+      "description": "Keep separate portfolios or workspaces in independent local databases.",
+      "sqliteOnly": "Isolated profiles are only available in standalone SQLite mode.",
+      "active": "Active",
+      "switch": "Switch",
+      "create": "Create",
+      "newPlaceholder": "Profile name (e.g. Personal, Business)",
+      "restartNotice": "Profile selected: restart Picsou to open its dedicated database."
+    }
   },
   "accessKeys": {
     "sectionTitle": "Access keys & MCP",

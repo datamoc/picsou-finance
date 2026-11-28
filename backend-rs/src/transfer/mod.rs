@@ -4,6 +4,7 @@
 pub mod account_export;
 pub mod actual;
 pub mod csv_import;
+pub mod encrypted_backup;
 pub mod finary;
 pub mod homebank;
 pub mod me_export;
@@ -30,6 +31,7 @@ pub fn register(routes: &mut Routes) {
     finary::register(routes);
     account_export::register(routes);
     me_export::register(routes);
+    encrypted_backup::register(routes);
 }
 
 /// OpenFigiIsinConverter.resolve, owned by track T4. Without it Java falls back to the ISIN.

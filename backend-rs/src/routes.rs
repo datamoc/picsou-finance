@@ -109,5 +109,6 @@ pub fn all() -> Routes {
     crate::jobs::register(&mut routes);
     crate::mcp::register(&mut routes);
     crate::ai::register(&mut routes);
+    crate::desktop_profiles::register(&mut routes);
     routes
 }

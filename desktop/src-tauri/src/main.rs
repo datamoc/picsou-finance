@@ -44,7 +44,8 @@ fn failure_script(failed: &Failed) -> String {
 fn layout(app: &tauri::AppHandle) -> tauri::Result<Layout> {
     // Local, not roaming: the embedded SQLite database must not sync with a roaming profile.
     // Tauri returns Windows paths as `\\?\C:\…`; simplify both folders to `C:\…` (a no-op elsewhere).
-    let data = dunce::simplified(&app.path().app_local_data_dir()?).to_path_buf();
+    let root = dunce::simplified(&app.path().app_local_data_dir()?).to_path_buf();
+    let data = picsou::desktop_profiles::resolve_desktop_active_dir(&root);
     Ok(Layout {
         runtime: dunce::simplified(&runtime_dir(app)).to_path_buf(),
         data,

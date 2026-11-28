@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Area, AreaChart, CartesianGrid, Legend, Line, ReferenceLine, XAxis, YAxis } from 'recharts'
 import { type ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart'
 import { TimeRangeSelector, type TimeRange } from '@/components/shared/TimeRangeSelector'
+import { ExportSvgButton } from '@/components/shared/ExportSvgButton'
 import { signedAmountClass } from '@/lib/money'
 import { cn, formatDate, localeFromLanguage, capitalizeFirst } from '@/lib/utils'
 import { useMoney } from '@/hooks/use-money'
@@ -193,6 +194,7 @@ function getXAxisFormatter(range: TimeRange, locale: string, spanMs: number) {
 export function NetWorthChart({ data, intraday = [], range, onRangeChange, showInvested = true, target, projection, todayMs, todayLabel }: NetWorthChartProps) {
   const money = useMoney()
   const { t, i18n } = useTranslation()
+  const chartContainerRef = useRef<HTMLDivElement>(null)
   const locale = localeFromLanguage(i18n.resolvedLanguage ?? i18n.language)
   const is24H = range === '24H'
 
@@ -358,12 +360,20 @@ export function NetWorthChart({ data, intraday = [], range, onRangeChange, showI
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
+      <div className="mb-3 flex items-center justify-end gap-2">
         <TimeRangeSelector value={range} onChange={onRangeChange} />
+        {!isEmpty24H && (
+          <ExportSvgButton
+            containerRef={chartContainerRef}
+            filename={`picsou-net-worth-${range.toLowerCase()}.svg`}
+            title={t('dashboard.netWorth')}
+          />
+        )}
       </div>
       {isEmpty24H ? (
         <EmptyChartState />
       ) : (
+      <div ref={chartContainerRef}>
       <ChartContainer config={chartConfig} className="h-[250px] w-full [&>div>div]:!w-full [&>div>div>svg]:!w-full">
         <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
         <defs>
@@ -494,6 +504,7 @@ export function NetWorthChart({ data, intraday = [], range, onRangeChange, showI
         )} />
       </AreaChart>
     </ChartContainer>
+      </div>
       )}
     </div>
   )

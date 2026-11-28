@@ -33,7 +33,8 @@
     "category": "Catégorie",
     "done": "Terminé",
     "labelColon": "{{label}} :",
-    "notFound": "Élément introuvable."
+    "notFound": "Élément introuvable.",
+    "exportSvg": "Exporter en SVG"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -2047,7 +2048,7 @@
         "reconnect": "Reconnecter Linxea",
         "waiting": "Connectez-vous dans la fenêtre Linxea qui vient de s’ouvrir…",
         "waitingHint": "Saisissez votre e-mail, votre mot de passe si demandé, puis le code reçu par e-mail directement sur le site de Linxea. La fenêtre se ferme automatiquement une fois connecté.",
-        "fetching": "Connecté — récupération de vos contrats Linxea…"
+        "fetching": "Connecté : récupération de vos contrats Linxea…"
       }
     },
     "amundi": {
@@ -2650,7 +2651,45 @@
     "profilePhotoInvalid": "Veuillez sélectionner une image valide (PNG, JPG ou WebP).",
     "usernameTooShort": "Le nom d'utilisateur doit contenir au moins 3 caractères.",
     "usernameInvalidChars": "Utilisez uniquement des lettres, chiffres, tirets ou underscores.",
-    "usernameTaken": "Ce nom d'utilisateur est déjà utilisé."
+    "usernameTaken": "Ce nom d'utilisateur est déjà utilisé.",
+    "compactNumbers": "Format des montants",
+    "compactNumbersFull": "Complet",
+    "compactNumbersCompact": "Compact",
+    "encryptedBackup": {
+      "title": "Sauvegardes chiffrées",
+      "description": "Exportez une copie chiffrée par mot de passe de votre base locale ou restaurez une sauvegarde existante.",
+      "storageStatus": "Stockage local",
+      "keystoreLabel": "Trousseau système",
+      "vaultLabel": "Coffre base de données",
+      "sqliteOnly": "Les sauvegardes chiffrées SQLite sont disponibles uniquement en mode autonome SQLite.",
+      "exportTitle": "Créer une sauvegarde chiffrée",
+      "exportDesc": "Chiffrement AES-256-GCM avec dérivation PBKDF2-HMAC-SHA256.",
+      "passphrase": "Mot de passe de chiffrement",
+      "passphrasePlaceholder": "8 caractères minimum",
+      "confirmPassphrase": "Confirmer le mot de passe",
+      "passphraseTooShort": "Le mot de passe doit contenir au moins 8 caractères.",
+      "passphraseMismatch": "Les mots de passe ne correspondent pas.",
+      "exportButton": "Télécharger la sauvegarde",
+      "exportSuccess": "Sauvegarde chiffrée téléchargée.",
+      "restoreTitle": "Vérifier ou restaurer une sauvegarde",
+      "restoreDesc": "Vérifiez l’intégrité avant de planifier la restauration au prochain démarrage.",
+      "chooseFile": "Choisir un fichier .picsou-backup",
+      "verifyButton": "Vérifier",
+      "restoreButton": "Planifier la restauration",
+      "verifyOk": "Sauvegarde valide ({{tables}} tables vérifiées).",
+      "verifyFailed": "La vérification d’intégrité a échoué.",
+      "restoreStaged": "Restauration préparée : redémarrez Picsou pour l’appliquer."
+    },
+    "profiles": {
+      "title": "Profils isolés",
+      "description": "Séparez plusieurs patrimoines ou environnements dans des bases locales indépendantes.",
+      "sqliteOnly": "Les profils isolés sont disponibles uniquement en mode autonome SQLite.",
+      "active": "Actif",
+      "switch": "Basculer",
+      "create": "Créer",
+      "newPlaceholder": "Nom du profil (ex. Personnel, Pro)",
+      "restartNotice": "Profil sélectionné : redémarrez Picsou pour ouvrir sa base dédiée."
+    }
   },
   "accessKeys": {
     "sectionTitle": "Clés d'accès et MCP",

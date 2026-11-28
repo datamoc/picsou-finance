@@ -33,7 +33,8 @@
     "errorTitle": "Error",
     "skipToContent": "Skip to main content",
     "category": "Category",
-    "notFound": "Elemento no encontrado."
+    "notFound": "Elemento no encontrado.",
+    "exportSvg": "Exportar como SVG"
   },
   "nav": {
     "dashboard": "Panel",
@@ -2344,7 +2345,45 @@
     "profilePhotoInvalid": "Seleccione una imagen válida (PNG, JPG o WebP).",
     "usernameTooShort": "El nombre de usuario debe tener al menos 3 caracteres.",
     "usernameInvalidChars": "Usa solo letras, números, guiones o guiones bajos.",
-    "usernameTaken": "Este nombre de usuario ya está en uso."
+    "usernameTaken": "Este nombre de usuario ya está en uso.",
+    "compactNumbers": "Formato de importes",
+    "compactNumbersFull": "Completo",
+    "compactNumbersCompact": "Compacto",
+    "encryptedBackup": {
+      "title": "Copias de seguridad cifradas",
+      "description": "Exporta una copia cifrada con contraseña de tu base local o restaura una copia existente.",
+      "storageStatus": "Almacenamiento local",
+      "keystoreLabel": "Llavero del sistema",
+      "vaultLabel": "Bóveda de base de datos",
+      "sqliteOnly": "Las copias cifradas solo están disponibles en modo autónomo SQLite.",
+      "exportTitle": "Crear copia cifrada",
+      "exportDesc": "Cifrado autenticado AES-256-GCM con derivación PBKDF2-HMAC-SHA256.",
+      "passphrase": "Contraseña de cifrado",
+      "passphrasePlaceholder": "Al menos 8 caracteres",
+      "confirmPassphrase": "Confirmar contraseña",
+      "passphraseTooShort": "La contraseña debe tener al menos 8 caracteres.",
+      "passphraseMismatch": "Las contraseñas no coinciden.",
+      "exportButton": "Descargar copia",
+      "exportSuccess": "Copia cifrada descargada.",
+      "restoreTitle": "Verificar o restaurar una copia",
+      "restoreDesc": "Verifica la integridad antes de programar la restauración en el próximo reinicio.",
+      "chooseFile": "Elegir archivo .picsou-backup",
+      "verifyButton": "Verificar",
+      "restoreButton": "Programar restauración",
+      "verifyOk": "Copia válida ({{tables}} tablas verificadas).",
+      "verifyFailed": "La verificación de integridad ha fallado.",
+      "restoreStaged": "Restauración preparada: reinicia Picsou para aplicarla."
+    },
+    "profiles": {
+      "title": "Perfiles aislados",
+      "description": "Separa distintos patrimonios o espacios de trabajo en bases locales independientes.",
+      "sqliteOnly": "Los perfiles aislados solo están disponibles en modo autónomo SQLite.",
+      "active": "Activo",
+      "switch": "Cambiar",
+      "create": "Crear",
+      "newPlaceholder": "Nombre del perfil (p. ej. Personal, Empresa)",
+      "restartNotice": "Perfil seleccionado: reinicia Picsou para abrir su base dedicada."
+    }
   },
   "accessKeys": {
     "sectionTitle": "Claves de acceso y MCP",

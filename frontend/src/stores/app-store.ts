@@ -28,6 +28,10 @@ interface AppState {
    * included, so Picsou can be demoed without disclosing what it is worth.
    */
   hideAmounts: boolean
+  /**
+   * Compact figures display mode: formats large monetary amounts concisely (e.g. 142,3 k€ / 1,25 M€).
+   */
+  compactNumbers: boolean
   /** Local custom profile photos keyed by memberId (or "self"), stored as compact 192px data URLs. */
   profilePhotos: Record<string, string>
   /** Latest What's New release version already opened by the user. */
@@ -43,6 +47,7 @@ interface AppState {
   dismissTelemetryConsent: () => void
   toggleHideAmounts: () => void
   setHideAmounts: (hidden: boolean) => void
+  setCompactNumbers: (compact: boolean) => void
   setProfilePhoto: (key: string, dataUrl: string | null) => void
   markWhatsNewSeen: (version: string) => void
 }
@@ -71,6 +76,7 @@ export const useAppStore = create<AppState>()(
       dismissedDesktopUpdateVersion: null,
       telemetryConsentDismissed: false,
       hideAmounts: false,
+      compactNumbers: false,
       profilePhotos: {},
       lastSeenWhatsNewVersion: null,
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
@@ -91,6 +97,7 @@ export const useAppStore = create<AppState>()(
       dismissTelemetryConsent: () => set({ telemetryConsentDismissed: true }),
       toggleHideAmounts: () => set((s) => ({ hideAmounts: !s.hideAmounts })),
       setHideAmounts: (hidden) => set({ hideAmounts: hidden }),
+      setCompactNumbers: (compactNumbers) => set({ compactNumbers }),
       setProfilePhoto: (key, dataUrl) =>
         set((s) => {
           const next = { ...s.profilePhotos }
@@ -112,6 +119,7 @@ export const useAppStore = create<AppState>()(
         // runtime error, the setting simply does not survive a reload. Mid-demo, that would be
         // a refresh away from showing everything.
         hideAmounts: s.hideAmounts,
+        compactNumbers: s.compactNumbers,
         profilePhotos: s.profilePhotos,
         lastSeenWhatsNewVersion: s.lastSeenWhatsNewVersion,
       }),

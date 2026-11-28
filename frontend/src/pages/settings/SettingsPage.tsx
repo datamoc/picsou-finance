@@ -46,9 +46,11 @@ import { PICSOU_GITHUB_URL } from '@/lib/whats-new'
 import { useInstanceStatus } from '@/features/admin/hooks'
 import { SecuritySection } from './security/SecuritySection'
 import { DesktopLockCard } from './security/DesktopLockCard'
+import { EncryptedBackupSection } from './security/EncryptedBackupSection'
 import { AccessKeysSection } from './sections/AccessKeysSection'
 import { ProfileSection } from './sections/ProfileSection'
 import { ConnectedAppsSection } from './sections/ConnectedAppsSection'
+import { DesktopProfilesCard } from './sections/DesktopProfilesCard'
 
 // ---------------------------------------------------------------------------
 // Toggle group button (theme / language)
@@ -147,6 +149,8 @@ export function SettingsPage() {
     setDateFormat,
     hideAmounts,
     setHideAmounts,
+    compactNumbers,
+    setCompactNumbers,
     profilePhotos,
     setProfilePhoto,
   } = useAppStore()
@@ -272,6 +276,11 @@ export function SettingsPage() {
     { value: 'hidden', label: t('settings.amountsHidden') },
   ]
 
+  const compactNumbersOptions: ToggleOption[] = [
+    { value: 'full', label: t('settings.compactNumbersFull') },
+    { value: 'compact', label: t('settings.compactNumbersCompact') },
+  ]
+
   const todayIso = new Date().toLocaleDateString('en-CA')
   const sampleDate = formatDate(todayIso, getLocale())
 
@@ -379,6 +388,24 @@ export function SettingsPage() {
                 options={amountsOptions}
                 value={hideAmounts ? 'hidden' : 'visible'}
                 onChange={(v) => setHideAmounts(v === 'hidden')}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl bg-card sm:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-3">
+              <CardTitle className="text-base font-semibold">
+                {t('settings.compactNumbers')}
+              </CardTitle>
+              <span className="rounded-md bg-muted/60 px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
+                {money.amount(142_350.45, 'EUR')}
+              </span>
+            </CardHeader>
+            <CardContent>
+              <ToggleGroup
+                options={compactNumbersOptions}
+                value={compactNumbers ? 'compact' : 'full'}
+                onChange={(v) => setCompactNumbers(v === 'compact')}
               />
             </CardContent>
           </Card>
@@ -540,6 +567,14 @@ export function SettingsPage() {
               <SecuritySection exportOnly />
             </SectionCard>
           )}
+          {isAdmin && (
+            <SectionCard
+              title={t('settings.encryptedBackup.title')}
+              description={t('settings.encryptedBackup.description')}
+            >
+              <EncryptedBackupSection />
+            </SectionCard>
+          )}
         </div>
       )}
 
@@ -596,6 +631,15 @@ export function SettingsPage() {
               </button>
             )}
           </div>
+
+          {isAdmin && (
+            <SectionCard
+              title={t('settings.profiles.title')}
+              description={t('settings.profiles.description')}
+            >
+              <DesktopProfilesCard />
+            </SectionCard>
+          )}
 
           <SectionCard
             title={t('settings.about')}

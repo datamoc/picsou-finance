@@ -179,7 +179,15 @@ function maskAmount(value: number, currency: string, locale: string): string {
   return masked
 }
 
-export function makeMoneyFormatter({ hidden, locale }: { hidden: boolean; locale: string }): MoneyFormatter {
+export function makeMoneyFormatter({
+  hidden,
+  locale,
+  compactNumbers = false,
+}: {
+  hidden: boolean
+  locale: string
+  compactNumbers?: boolean
+}): MoneyFormatter {
   const compact = (value: number, opts: { currency?: string; maximumFractionDigits?: number } = {}) => {
     const currency = opts.currency ?? 'EUR'
     if (hidden) return maskAmount(value, currency, locale)
@@ -200,9 +208,11 @@ export function makeMoneyFormatter({ hidden, locale }: { hidden: boolean; locale
   return {
     hidden,
     amount(value: number, currency = 'EUR', opts: { maximumFractionDigits?: number } = {}) {
-      return hidden
-        ? maskAmount(value, currency, locale)
-        : formatCurrencyIntl(value, currency, locale, opts.maximumFractionDigits)
+      if (hidden) return maskAmount(value, currency, locale)
+      if (compactNumbers) {
+        return compact(value, { currency, maximumFractionDigits: opts.maximumFractionDigits })
+      }
+      return formatCurrencyIntl(value, currency, locale, opts.maximumFractionDigits)
     },
     compact,
     quote(value: number, currency = 'EUR') {

@@ -12,6 +12,7 @@ pub mod config;
 pub mod connectors;
 pub mod crypto;
 pub mod db;
+pub mod desktop_profiles;
 pub mod error;
 pub mod family;
 pub mod http;
