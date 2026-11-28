@@ -71,7 +71,7 @@ describe('AnalysisPage', () => {
 
   it('renders the pyramid once there is wealth to place', () => {
     useAllocationTargets.mockReturnValue({
-      data: { monthlyEssentialExpenses: 1850, safetyNetMonths: 6, realEstatePct: 30, equityPct: 50, cryptoPct: 10, alternativePct: 10 },
+      data: { monthlyEssentialExpenses: 1850, safetyNetMonths: 6, bondsPct: 20, realEstatePct: 30, equityPct: 30, cryptoPct: 10, alternativePct: 10 },
     })
     useWealthPyramid.mockReturnValue({
       isLoading: false,
@@ -94,7 +94,7 @@ describe('AnalysisPage', () => {
 
   it('opens the targets modal and focuses the expenses field when clicking the safety-net CTA', async () => {
     useAllocationTargets.mockReturnValue({
-      data: { monthlyEssentialExpenses: null, safetyNetMonths: 6, realEstatePct: 30, equityPct: 50, cryptoPct: 10, alternativePct: 10 },
+      data: { monthlyEssentialExpenses: null, safetyNetMonths: 6, bondsPct: 20, realEstatePct: 30, equityPct: 30, cryptoPct: 10, alternativePct: 10 },
     })
     useWealthPyramid.mockReturnValue({
       isLoading: false,

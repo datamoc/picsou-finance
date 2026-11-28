@@ -26,7 +26,7 @@ async fn an_unconfigured_member_reads_the_defaults_without_a_row_being_written()
     let targets = get_json(&client, "/api/analysis/allocation-targets").await;
     assert_eq!(
         targets.to_string(),
-        r#"{"safetyNetMonths":6,"realEstatePct":30.00,"equityPct":50.00,"cryptoPct":10.00,"alternativePct":10.00}"#
+        r#"{"safetyNetMonths":6,"bondsPct":20.00,"realEstatePct":30.00,"equityPct":30.00,"cryptoPct":10.00,"alternativePct":10.00}"#
     );
     let rows: i64 = picsou::db::query_scalar("SELECT count(*) FROM member_allocation_profile")
         .fetch_one(&app.state.db)
@@ -70,7 +70,7 @@ async fn targets_not_summing_to_one_hundred_are_a_422_and_missing_ones_say_so_fi
 async fn replacing_the_targets_creates_then_updates_one_row_and_answers_the_request_scale() {
     let app = TestApp::with_admin().await;
     let (_, client) = signed_in(&app, "alice").await;
-    let body = json!({"monthlyEssentialExpenses": 1500.5, "safetyNetMonths": 3, "realEstatePct": 40,
+    let body = json!({"monthlyEssentialExpenses": 1500.5, "safetyNetMonths": 3, "bondsPct": 0, "realEstatePct": 40,
                       "equityPct": 45.5, "cryptoPct": 14.5, "alternativePct": 0});
     let saved = client
         .put("/api/analysis/allocation-targets")
@@ -145,8 +145,8 @@ async fn accounts_land_in_their_tiers_and_cash_sits_outside_the_allocation() {
     assert_eq!(num(&pyramid["safetyNet"]["dailyCashEur"]), "2000.00");
     assert_eq!(num(&pyramid["allocatableEur"]), "10000.00");
     assert_eq!(num(&tier(&pyramid, "EQUITY")["actualPercent"]), "60.00");
-    assert_eq!(num(&tier(&pyramid, "EQUITY")["targetEur"]), "5000.00");
-    assert_eq!(num(&tier(&pyramid, "EQUITY")["gapPercent"]), "10.00");
+    assert_eq!(num(&tier(&pyramid, "EQUITY")["targetEur"]), "3000.00");
+    assert_eq!(num(&tier(&pyramid, "EQUITY")["gapPercent"]), "30.00");
     assert!(
         pyramid["tiers"]
             .as_array()
@@ -156,15 +156,15 @@ async fn accounts_land_in_their_tiers_and_cash_sits_outside_the_allocation() {
     );
     // Without stated expenses the cushion is unrated, so only the allocation term scores.
     assert!(pyramid["safetyNet"].get("score").is_none());
-    assert_eq!(pyramid["score"]["allocation"], 70);
-    assert_eq!(pyramid["score"]["global"], 70);
+    assert_eq!(pyramid["score"]["allocation"], 50);
+    assert_eq!(pyramid["score"]["global"], 50);
     let alerts: Vec<&str> = pyramid["alerts"]
         .as_array()
         .unwrap()
         .iter()
         .map(|a| a["code"].as_str().unwrap())
         .collect();
-    assert_eq!(alerts, ["EMPTY_TIER"]);
+    assert_eq!(alerts, ["EMPTY_TIER", "EMPTY_TIER"]);
 }
 
 #[tokio::test]
@@ -274,6 +274,96 @@ async fn lines_are_split_by_override_then_provider_tier_then_coin_registry() {
     );
     assert_eq!(num(&pyramid["totalAssetsEur"]), "10100.00");
     assert_eq!(num(&pyramid["score"]["cryptoTopTenShare"]), "100.00");
+}
+
+#[tokio::test]
+async fn a_contracts_euro_fund_counts_as_bonds_and_its_unit_linked_lines_as_equity() {
+    let app = TestApp::with_admin().await;
+    let (alice, client) = signed_in(&app, "alice").await;
+    // The euro fund is what a contract holds outside its listed lines.
+    let contract = account(
+        &app,
+        Acct {
+            cash: Some("3000"),
+            ..Acct::new(alice, "ASSURANCE_VIE", "0")
+        },
+    )
+    .await;
+    holding(&app, contract, "PSUC", "1", None).await;
+    price(&app, "PSUC", "1000").await;
+    // A contract read as one value, without lines, as Lucya imports one.
+    simple(&app, alice, "PER", "2000").await;
+    // A bond fund in a securities account, classified by the member.
+    let cto = simple(&app, alice, "COMPTE_TITRES", "0").await;
+    holding(&app, cto, "PSBOND", "1", None).await;
+    price(&app, "PSBOND", "500").await;
+    let classified = client
+        .put(&format!(
+            "/api/accounts/{cto}/holdings/psbond/classification"
+        ))
+        .json(&json!({"wealthTier": "BONDS"}))
+        .send()
+        .await;
+    assert_eq!(classified.status, 200, "{}", classified.text());
+
+    let pyramid = get_json(&client, "/api/analysis/pyramid").await;
+    assert_eq!(pyramid["tiers"][0]["tier"], "BONDS");
+    assert_eq!(dec(&tier(&pyramid, "BONDS")["valueEur"]), d("5500"));
+    assert_eq!(dec(&tier(&pyramid, "EQUITY")["valueEur"]), d("1000"));
+    assert_eq!(num(&tier(&pyramid, "BONDS")["targetPercent"]), "20.00");
+    assert_eq!(num(&pyramid["totalAssetsEur"]), "6500.00");
+}
+
+#[tokio::test]
+async fn bonds_have_their_own_target_and_a_client_unaware_of_it_still_saves() {
+    let app = TestApp::with_admin().await;
+    let (_, client) = signed_in(&app, "alice").await;
+    let put = |body: Value| {
+        let client = &client;
+        async move {
+            client
+                .put("/api/analysis/allocation-targets")
+                .json(&body)
+                .send()
+                .await
+        }
+    };
+    let without = put(
+        json!({"safetyNetMonths": 6, "realEstatePct": 30, "equityPct": 50,
+                              "cryptoPct": 10, "alternativePct": 10}),
+    )
+    .await;
+    assert_eq!(without.status, 200, "{}", without.text());
+    assert_eq!(num(&without.json()["bondsPct"]), "0");
+    let with = put(
+        json!({"safetyNetMonths": 6, "bondsPct": 25, "realEstatePct": 25,
+                           "equityPct": 30, "cryptoPct": 10, "alternativePct": 10}),
+    )
+    .await;
+    assert_eq!(with.status, 200, "{}", with.text());
+    let read = get_json(&client, "/api/analysis/allocation-targets").await;
+    assert_eq!(num(&read["bondsPct"]), "25.00");
+    let pyramid = get_json(&client, "/api/analysis/pyramid").await;
+    assert_eq!(num(&tier(&pyramid, "BONDS")["targetPercent"]), "25.00");
+
+    let over = put(
+        json!({"safetyNetMonths": 6, "bondsPct": 10, "realEstatePct": 30,
+                           "equityPct": 50, "cryptoPct": 10, "alternativePct": 10}),
+    )
+    .await;
+    assert_eq!(
+        over.json()["errors"],
+        json!({"summingToOneHundred": "allocation targets must sum to 100"})
+    );
+    let negative = put(
+        json!({"safetyNetMonths": 6, "bondsPct": -10, "realEstatePct": 40,
+                               "equityPct": 50, "cryptoPct": 10, "alternativePct": 10}),
+    )
+    .await;
+    assert_eq!(
+        negative.json()["errors"],
+        json!({"bondsPct": "must be greater than or equal to 0"})
+    );
 }
 
 #[tokio::test]
@@ -767,7 +857,7 @@ async fn the_projection_compounds_the_investable_base_only() {
         "{ends:?}"
     );
     let mix = &projection["allocation"][0]["tiers"];
-    assert_eq!(mix.as_array().unwrap().len(), 5);
+    assert_eq!(mix.as_array().unwrap().len(), 6);
     assert!(
         mix[0].get("targetPercent").is_none(),
         "the cushion has no percentage target"

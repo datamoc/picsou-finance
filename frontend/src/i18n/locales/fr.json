@@ -370,6 +370,7 @@
     },
     "tiers": {
       "SAFETY_NET": "Matelas de sécurité",
+      "BONDS": "Obligations et fonds euros",
       "REAL_ESTATE": "Immobilier",
       "EQUITY": "Actions et ETF",
       "CRYPTO": "Crypto",
@@ -418,7 +419,7 @@
       "months": "Mois de dépenses à couvrir",
       "allocation": "Répartition du reste du patrimoine",
       "sum": "Total {{value}} / {{max}}",
-      "allocationHint": "Les quatre pourcentages doivent totaliser 100%."
+      "allocationHint": "Les cinq pourcentages doivent totaliser 100%."
     },
     "targetAmount": "Objectif :",
     "diversification": {

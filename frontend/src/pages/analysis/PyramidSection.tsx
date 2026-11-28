@@ -15,6 +15,7 @@ import type { WealthAlert, WealthPyramid, WealthTier, WealthTierLine } from '@/t
  */
 const TIER_COLORS: Record<WealthTier, string> = {
   SAFETY_NET: '#10b981',
+  BONDS: '#f59e0b',
   REAL_ESTATE: '#8b5cf6',
   EQUITY: '#3b82f6',
   CRYPTO: '#0ea5e9',

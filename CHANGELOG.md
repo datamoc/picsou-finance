@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Bonds and euro funds in the wealth pyramid.** Analysis has a "Bonds & euro funds" tier with
+  its own target (20 % by default, taken from equity). The euro fund of a life-insurance or PER
+  contract goes there instead of counting as equity, as does a contract imported without its
+  lines, and a bond fund can be moved there by hand. Targets saved before keep 0 % bonds until
+  you edit them.
 - **Roadmap standalone suite (Health Center, Contribution Limits, Rebalancing Worksheet, TWR/MWR Performance & Benchmarks, FIRE Simulator, Virtual Portfolios, Custom Taxonomies, Consolidated Income, Integrated AI Assistant & AI CSV Mapping, Budget Splits & Events, FIFO/LIFO/HIFO Cost Basis & Stock Splits, Resilient Market Data Chain, Encrypted Backups, Isolated Desktop Profiles, Compact Numbers, and SVG Chart Export).** All implemented natively in Rust and React with dual-engine PostgreSQL (`V160`) and SQLite (`V7`) migrations, zero Docker and zero Python.
 - **Linxea connector.** Synchronize Linxea PER, life-insurance (*assurance vie*), and PEA contracts
   (supports, euro funds, units, average buy-in, P&L, and EUR valuation) natively on Picsou Desktop

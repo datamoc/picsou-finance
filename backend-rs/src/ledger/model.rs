@@ -161,6 +161,7 @@ impl AssetClass {
 
 string_enum!(WealthTier {
     SafetyNet = "SAFETY_NET",
+    Bonds = "BONDS",
     RealEstate = "REAL_ESTATE",
     Equity = "EQUITY",
     Crypto = "CRYPTO",
@@ -168,6 +169,7 @@ string_enum!(WealthTier {
 });
 
 impl WealthTier {
+    /// The tier of a position an account holds and nothing else classifies.
     pub fn of(account_type: AccountType) -> Self {
         use AccountType::*;
         match account_type {
@@ -176,6 +178,16 @@ impl WealthTier {
             Pea | CompteTitres | EmployeeSavings | AssuranceVie | Per | Brokerage => Self::Equity,
             Crypto => Self::Crypto,
             CreditCard | PeerLoan | Other | PreciousMetals => Self::Alternative,
+        }
+    }
+
+    /// The tier of the money an account holds outside its listed positions, or of its whole value
+    /// when it lists none. In a life-insurance or PER contract that money is the euro fund, which
+    /// insurers invest mostly in bonds; unit-linked lines keep the tier `of` gives them.
+    pub fn of_uninvested(account_type: AccountType) -> Self {
+        match account_type {
+            AccountType::AssuranceVie | AccountType::Per => Self::Bonds,
+            other => Self::of(other),
         }
     }
 }

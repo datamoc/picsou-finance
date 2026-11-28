@@ -212,6 +212,7 @@ struct AccountTierRow {
 
 #[derive(DbFromRow)]
 struct TargetRow {
+    bonds_pct: Decimal,
     real_estate_pct: Decimal,
     equity_pct: Decimal,
     crypto_pct: Decimal,
@@ -220,10 +221,9 @@ struct TargetRow {
 
 fn account_type_to_tier(account_type: &str) -> Option<&'static str> {
     match account_type {
+        "ASSURANCE_VIE" | "PER" => Some("BONDS"),
         "REAL_ESTATE" | "SCPI" => Some("REAL_ESTATE"),
-        "PEA" | "COMPTE_TITRES" | "BROKERAGE" | "ASSURANCE_VIE" | "PER" | "EMPLOYEE_SAVINGS" => {
-            Some("EQUITY")
-        }
+        "PEA" | "COMPTE_TITRES" | "BROKERAGE" | "EMPLOYEE_SAVINGS" => Some("EQUITY"),
         "CRYPTO" => Some("CRYPTO"),
         "PRECIOUS_METALS" | "PEER_LOAN" | "OTHER" => Some("ALTERNATIVE"),
         _ => None,
@@ -243,20 +243,21 @@ async fn compute_rebalance_plan(
     .fetch_all(&state.db)
     .await?;
 
-    let mut totals = [0.0_f64; 4]; // REAL_ESTATE, EQUITY, CRYPTO, ALTERNATIVE
+    let mut totals = [0.0_f64; 5]; // BONDS, REAL_ESTATE, EQUITY, CRYPTO, ALTERNATIVE
     for a in &accounts {
         let val = a.current_balance.to_f64().unwrap_or(0.0).max(0.0);
         match account_type_to_tier(&a.account_type) {
-            Some("REAL_ESTATE") => totals[0] += val,
-            Some("EQUITY") => totals[1] += val,
-            Some("CRYPTO") => totals[2] += val,
-            Some("ALTERNATIVE") => totals[3] += val,
+            Some("BONDS") => totals[0] += val,
+            Some("REAL_ESTATE") => totals[1] += val,
+            Some("EQUITY") => totals[2] += val,
+            Some("CRYPTO") => totals[3] += val,
+            Some("ALTERNATIVE") => totals[4] += val,
             _ => {}
         }
     }
 
     let saved: Option<TargetRow> = crate::db::query_as(
-        "SELECT real_estate_pct, equity_pct, crypto_pct, alternative_pct \
+        "SELECT bonds_pct, real_estate_pct, equity_pct, crypto_pct, alternative_pct \
          FROM member_allocation_profile WHERE member_id = $1",
     )
     .bind(auth.member_id)
@@ -265,31 +266,34 @@ async fn compute_rebalance_plan(
 
     let mut target_pcts = match saved {
         Some(t) => [
+            t.bonds_pct.to_f64().unwrap_or(0.0),
             t.real_estate_pct.to_f64().unwrap_or(30.0),
-            t.equity_pct.to_f64().unwrap_or(55.0),
+            t.equity_pct.to_f64().unwrap_or(30.0),
             t.crypto_pct.to_f64().unwrap_or(10.0),
-            t.alternative_pct.to_f64().unwrap_or(5.0),
+            t.alternative_pct.to_f64().unwrap_or(10.0),
         ],
-        None => [30.0, 55.0, 10.0, 5.0],
+        None => [20.0, 30.0, 30.0, 10.0, 10.0],
     };
 
     if let Some(overrides) = &req.targets {
         for item in overrides {
             match item.tier.as_str() {
-                "REAL_ESTATE" => target_pcts[0] = item.target_pct.clamp(0.0, 100.0),
-                "EQUITY" => target_pcts[1] = item.target_pct.clamp(0.0, 100.0),
-                "CRYPTO" => target_pcts[2] = item.target_pct.clamp(0.0, 100.0),
-                "ALTERNATIVE" => target_pcts[3] = item.target_pct.clamp(0.0, 100.0),
+                "BONDS" => target_pcts[0] = item.target_pct.clamp(0.0, 100.0),
+                "REAL_ESTATE" => target_pcts[1] = item.target_pct.clamp(0.0, 100.0),
+                "EQUITY" => target_pcts[2] = item.target_pct.clamp(0.0, 100.0),
+                "CRYPTO" => target_pcts[3] = item.target_pct.clamp(0.0, 100.0),
+                "ALTERNATIVE" => target_pcts[4] = item.target_pct.clamp(0.0, 100.0),
                 _ => {}
             }
         }
     }
 
     let tiers = vec![
-        ("REAL_ESTATE".to_owned(), totals[0], target_pcts[0]),
-        ("EQUITY".to_owned(), totals[1], target_pcts[1]),
-        ("CRYPTO".to_owned(), totals[2], target_pcts[2]),
-        ("ALTERNATIVE".to_owned(), totals[3], target_pcts[3]),
+        ("BONDS".to_owned(), totals[0], target_pcts[0]),
+        ("REAL_ESTATE".to_owned(), totals[1], target_pcts[1]),
+        ("EQUITY".to_owned(), totals[2], target_pcts[2]),
+        ("CRYPTO".to_owned(), totals[3], target_pcts[3]),
+        ("ALTERNATIVE".to_owned(), totals[4], target_pcts[4]),
     ];
 
     Ok(axum::Json(solve_rebalance(

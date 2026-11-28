@@ -218,7 +218,7 @@ async fn all_roadmap_endpoints_execute_cleanly_on_sqlite() {
     )
     .await;
     assert_eq!(st, StatusCode::OK, "rebalance: {rebal}");
-    assert_eq!(rebal["rows"].as_array().unwrap().len(), 4);
+    assert_eq!(rebal["rows"].as_array().unwrap().len(), 5);
 
     // 4. Performance TWR/MWR + Benchmarks
     let (st, perf) = req_json(&app, Method::GET, "/api/wealth/performance?range=1Y", &cookie, None).await;

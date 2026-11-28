@@ -783,7 +783,7 @@ async fn a_life_contract_becomes_one_assurance_vie_account_with_its_lines_and_op
                 d("500"),
                 Some(d("1")),
                 Some(d("0")),
-                None
+                Some("BONDS".into())
             ),
         ]
     );

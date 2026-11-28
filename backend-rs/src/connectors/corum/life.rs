@@ -482,14 +482,20 @@ fn to_holding(holding: &LifeHolding, line_costs: bool, synced_at: DateTime<Utc>)
         provider_price_date: holding.valuation_date,
         provider_pnl_eur: net_invested.map(|net| value - net),
         last_synced_at: Some(synced_at),
-        provider_wealth_tier: provider_tier(holding.asset_class.as_deref()),
+        provider_wealth_tier: provider_tier(holding.asset_class.as_deref(), holding.euro_fund),
         isin: None,
     }
 }
 
-/// Only CORUM's \`realEstate\` section is conclusive; every other line keeps the account's tier.
-fn provider_tier(asset_class: Option<&str>) -> Option<WealthTier> {
-    (asset_class == Some("realEstate")).then_some(WealthTier::RealEstate)
+/// CORUM's \`realEstate\` section is property, its euro fund and bond funds are bonds; every other
+/// line keeps the account's tier.
+fn provider_tier(asset_class: Option<&str>, euro_fund: bool) -> Option<WealthTier> {
+    match asset_class {
+        Some("realEstate") => Some(WealthTier::RealEstate),
+        Some("euroLife" | "bondFund") => Some(WealthTier::Bonds),
+        _ if euro_fund => Some(WealthTier::Bonds),
+        _ => None,
+    }
 }
 
 /// CORUM's frequency word as a cadence; a plan of zero or an unknown word is left out, never a
@@ -570,12 +576,21 @@ mod tests {
     }
 
     #[test]
-    fn provider_tier_only_real_estate_is_conclusive() {
+    fn provider_tier_reads_property_bonds_and_the_euro_fund() {
         assert_eq!(
-            provider_tier(Some("realEstate")),
+            provider_tier(Some("realEstate"), false),
             Some(WealthTier::RealEstate)
         );
-        assert_eq!(provider_tier(Some("bondFund")), None);
-        assert_eq!(provider_tier(None), None);
+        assert_eq!(
+            provider_tier(Some("bondFund"), false),
+            Some(WealthTier::Bonds)
+        );
+        assert_eq!(
+            provider_tier(Some("euroLife"), false),
+            Some(WealthTier::Bonds)
+        );
+        assert_eq!(provider_tier(None, true), Some(WealthTier::Bonds));
+        assert_eq!(provider_tier(Some("equityFund"), false), None);
+        assert_eq!(provider_tier(None, false), None);
     }
 }

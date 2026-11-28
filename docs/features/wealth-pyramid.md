@@ -1,12 +1,12 @@
 # Feature: Wealth pyramid (Analysis)
 
-> Last updated: 2026-11-26
+> Last updated: 2026-11-28
 
 ## Context
 
 The Dashboard and Accounts pages measure wealth; nothing said whether it was **well built**. The
 Analysis section (`/analysis`) places every asset on the investment pyramid — emergency fund,
-property, listed equity, crypto, alternatives — compares the result to targets the member owns,
+bonds and euro funds, property, listed equity, crypto, alternatives — compares the result to targets the member owns,
 and scores it out of 100.
 
 Two account types were added for it: `ASSURANCE_VIE` and `SCPI`. The pyramid names both, and no
@@ -25,6 +25,7 @@ silently vanish from a chart. A `Map` cannot have this property; a switch expres
 | Tier | Account types |
 |---|---|
 | `SAFETY_NET` | `SAVINGS`, `LEP`, `LIVRET_A`, `LDDS`, `LIVRET_JEUNE`, `PEL`, `CEL` — and `CHECKING`, which the service then sets aside (below) |
+| `BONDS` | no account type: the uninvested money of an `ASSURANCE_VIE` or `PER` (below), a provider's bond or euro-fund line, or a member's override |
 | `REAL_ESTATE` | `REAL_ESTATE`, `SCPI` (and `LOAN`, only so the switch stays total — loans never enter as assets) |
 | `EQUITY` | `PEA`, `COMPTE_TITRES`, `BROKERAGE`, `EMPLOYEE_SAVINGS`, `ASSURANCE_VIE`, `PER` |
 | `CRYPTO` | `CRYPTO` |
@@ -44,14 +45,20 @@ first and **never a network call** (this endpoint renders a page):
 3. `account_holding.provider_wealth_tier`, the tier the provider's own asset-class view gives the
    line (`HoldingResponse.providerWealthTier`), which beats both. Only the
    [CORUM Life](./corum-life.md) sync writes it: an SCPI unit inside the contract is
-   `REAL_ESTATE`; bond funds and the euro fund stay null, so they keep the account's `EQUITY`;
+   `REAL_ESTATE`, the euro fund and bond funds are `BONDS`;
 4. `holding_classification.wealth_tier` for `(memberId, ticker)`, which beats all three. No sync
    writes it.
 
 Whatever the lines do not account for — cash inside the envelope, and any position the price
-providers dropped — stays with the account's own tier as a **residual**. Without it, a
-life-insurance euro fund would vanish from the pyramid while still counting in the dashboard's
-net worth.
+providers dropped — stays with the account as a **residual**. Without it, a life-insurance euro
+fund would vanish from the pyramid while still counting in the dashboard's net worth.
+
+The residual goes to `WealthTier::of_uninvested`: the account's tier, except for `ASSURANCE_VIE`
+and `PER`, whose residual is `BONDS`. In those contracts it is the euro fund: BoursoBank and the
+Caisse d'Epargne PER report it as the contract's cash, not as a line. Insurers invest euro funds
+mostly in bonds, so counting them as equity, as before, overstated the risk. A contract without
+lines, such as a [Lucya](./lucya.md) one or a balance typed by hand, is `BONDS` as a whole: its
+unit-linked part cannot be told apart. Its unit-linked lines, when listed, keep `EQUITY`.
 
 An account without holdings that declares a [tracked fund](./tracked-fund.md) (an ISIN, and not
 a liability, peer loan, real estate, SCPI or pocket) is not tiered by its type: its whole value
@@ -93,7 +100,10 @@ allocatable = totalAssets - safetyNetValue - dailyCash
 excess      = max(0, safetyNetValue - target)
 ```
 
-The four investment targets are percentages of `allocatable` and sum to 100 between themselves.
+The five investment targets are percentages of `allocatable` and sum to 100 between themselves.
+The defaults are 20 % bonds, 30 % property, 30 % equity, 10 % crypto, 10 % alternatives.
+`bondsPct` is optional in a `PUT` (absent means 0), so a client written before the tier existed
+still saves; a profile saved before it reads 0 % bonds until the member edits it.
 The cushion is **not** one of the bars: it is measured in euros against an absolute target, and a
 second line expressing the same money as a share of something else read as a contradiction.
 
@@ -235,6 +245,8 @@ GET /api/analysis/pyramid
 | Assets only, not net worth | The dashboard's rule already; counting property net of its mortgage would penalise exactly the leverage the pyramid is intended to maximise — LTV is surfaced beside the tier instead | Net-worth-based tiers |
 | Absolute safety-net target | Six months of rent does not scale with the portfolio | A percentage target like the other four |
 | Passbooks only in the cushion | A current account holds money already committed to this month | Counting every liquid euro |
+| A `BONDS` tier holding the euro fund | Insurers invest euro funds mostly in bonds; as `EQUITY` they overstated the risk, as `SAFETY_NET` they would count as emergency cash although a withdrawal from a contract takes days and may be taxed | Keeping euro funds in `EQUITY`; putting them in the cushion |
+| Its target in a new column, `bonds_pct`, 0 on saved profiles | The sum CHECK stays a CHECK (see the column-per-tier choice below), and a saved profile keeps meaning what the member chose | Rescaling saved profiles to make room for 20 % bonds |
 | Cushion kept out of the allocation bars | It is measured in euros; a second line as a share of something else contradicts it on screen | A `SAFETY_NET` line carrying the excess at target 0 |
 | `targetEur` beside `targetPercent` | "You are 15 000 € short here" is actionable; "−6.4 pts" is not | Points alone |
 | Half-L1 divergence | The only measure with a plain-language meaning: the fraction of wealth in the wrong place | RMSE (uninterpretable); χ² (explodes when a target is small — 10 % crypto held at 0 % would dominate) |
@@ -250,6 +262,13 @@ GET /api/analysis/pyramid
 | `VARCHAR` + `CHECK` for the new enums | Only V1/V3/V20 create native PG enums; everything since V24 uses this. It also sidesteps the `ALTERNATE TYPE … ADD VALUE` transaction restriction | `CREATE TYPE`, which `docs/conventions/database.md` still prescribes — see Gotchas |
 
 ## Gotchas / Pitfalls
+
+- **The `BONDS` migration is PostgreSQL V160 and SQLite V7, not V159 and V6.** Those belong to
+  another branch of this fork; numbers may have gaps. On SQLite it rebuilds `member_allocation_profile`,
+  `holding_classification` and `account_holding` to change their CHECKs. A database migrated by it
+  refuses an older binary (`validate_applied`), so going back means restoring a backup.
+- **Arrays indexed by tier are sized by `TIER_COUNT`** (`WealthTier::ALL.len()`), not by a literal:
+  a new tier makes a literal-sized array panic at run time rather than fail to compile.
 
 - **`docs/conventions/database.md` and the code disagree about enums.** The doc prescribes
   `CREATE TYPE … AS ENUM` + `@JdbcTypeCode(NAMED_ENUM)`; in practice only `account_type`,

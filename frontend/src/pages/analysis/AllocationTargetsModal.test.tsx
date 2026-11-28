@@ -30,8 +30,9 @@ vi.mock('react-i18next', () => ({
 const baseTargets: AllocationTargets = {
   monthlyEssentialExpenses: null,
   safetyNetMonths: 6,
+  bondsPct: 20,
   realEstatePct: 30,
-  equityPct: 50,
+  equityPct: 30,
   cryptoPct: 10,
   alternativePct: 10,
 }
@@ -349,6 +350,23 @@ describe('AllocationTargetsModal', () => {
     expect(screen.queryByText(/analysis\.targets\.estimatePrefillHint/)).not.toBeInTheDocument()
     expect(screen.queryByText('analysis.targets.recurringPrefillHint')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'analysis.targets.useSuggestion' })).toBeInTheDocument()
+  })
+
+  it('edits the bonds target and counts it in the sum', () => {
+    render(<AllocationTargetsModal open onOpenChange={vi.fn()} targets={baseTargets} />)
+
+    const bonds = screen.getByLabelText('analysis.tiers.BONDS') as HTMLInputElement
+    expect(bonds.value).toBe('20')
+    fireEvent.change(bonds, { target: { value: '30' } })
+    expect(screen.getByRole('alert')).toHaveTextContent('analysis.targets.allocationHint')
+    expect(screen.getByRole('button', { name: 'common.save' })).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText('analysis.tiers.EQUITY'), { target: { value: '20' } })
+    fireEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ bondsPct: 30, equityPct: 20 }),
+      expect.any(Object),
+    )
   })
 
   it('masks the suggestion amount in privacy mode', () => {

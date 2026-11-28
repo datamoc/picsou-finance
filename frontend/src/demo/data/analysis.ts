@@ -7,15 +7,16 @@ import type {
 } from '@/types/api'
 
 /**
- * A deliberately imperfect portfolio: the emergency fund overshoots, equity is well under
+ * A deliberately imperfect portfolio: the emergency fund overshoots, bonds are well under
  * target and alternatives are almost absent. A demo that scores 100 shows none of the UI that
  * matters — the gap badges, the excess-cash line, the "money to move" figure.
  */
 export const mockAllocationTargets: AllocationTargets = {
   monthlyEssentialExpenses: 1850,
   safetyNetMonths: 6,
+  bondsPct: 20,
   realEstatePct: 30,
-  equityPct: 50,
+  equityPct: 30,
   cryptoPct: 10,
   alternativePct: 10,
 }
@@ -38,6 +39,16 @@ export const mockWealthPyramid: WealthPyramid = {
   },
   tiers: [
     {
+      // The life-insurance contract's euro fund; its unit-linked lines are equity.
+      tier: 'BONDS',
+      targetEur: 63840,
+      valueEur: 30000,
+      actualPercent: 9.4,
+      targetPercent: 20,
+      gapPercent: -10.6,
+      accounts: [{ accountId: 5, name: 'Assurance vie', color: '#8b5cf6', valueEur: 30000 }],
+    },
+    {
       tier: 'REAL_ESTATE',
       targetEur: 95760,
       valueEur: 138000,
@@ -48,14 +59,14 @@ export const mockWealthPyramid: WealthPyramid = {
     },
     {
       tier: 'EQUITY',
-      targetEur: 159600,
-      valueEur: 142400,
-      actualPercent: 44.61,
-      targetPercent: 50,
-      gapPercent: -5.39,
+      targetEur: 95760,
+      valueEur: 112400,
+      actualPercent: 35.21,
+      targetPercent: 30,
+      gapPercent: 5.21,
       accounts: [
         { accountId: 2, name: 'PEA', color: '#6366f1', valueEur: 96400 },
-        { accountId: 5, name: 'Assurance vie', color: '#8b5cf6', valueEur: 46000 },
+        { accountId: 5, name: 'Assurance vie', color: '#8b5cf6', valueEur: 16000 },
       ],
     },
     {
@@ -83,9 +94,9 @@ export const mockWealthPyramid: WealthPyramid = {
     { code: 'SINGLE_ASSET_CONCENTRATION', label: 'Appartement Lyon', valueEur: 138000, percent: 40.39 },
   ],
   score: {
-    global: 91,
-    allocation: 86,
-    misplacedPercent: 13.51,
+    global: 88,
+    allocation: 81,
+    misplacedPercent: 18.72,
     cryptoPenalty: 0.1,
     leverageBonus: 4.28,
     cryptoTopTenShare: 72.5,
@@ -550,14 +561,16 @@ export function mockProjection(
       const property = 138000
       const equity = 96400 + monthly * 12 * y * 1.2
       const crypto = 32800 * Math.pow(1.05, y)
+      const bonds = 30000 * Math.pow(1.03, y)
       const cushion = 18200
-      const total = property + equity + crypto + cushion
+      const total = property + bonds + equity + crypto + cushion
       const share = (v: number) => Math.round((v / total) * 10000) / 100
       return {
         date: isoMonthEnd(y * 12),
         tiers: [
+          { tier: 'BONDS' as const, valueEur: bonds, percent: share(bonds), targetPercent: 20 },
           { tier: 'REAL_ESTATE' as const, valueEur: property, percent: share(property), targetPercent: 30 },
-          { tier: 'EQUITY' as const, valueEur: equity, percent: share(equity), targetPercent: 50 },
+          { tier: 'EQUITY' as const, valueEur: equity, percent: share(equity), targetPercent: 30 },
           { tier: 'CRYPTO' as const, valueEur: crypto, percent: share(crypto), targetPercent: 10 },
           { tier: 'ALTERNATIVE' as const, valueEur: 0, percent: 0, targetPercent: 10 },
           { tier: 'SAFETY_NET' as const, valueEur: cushion, percent: share(cushion), targetPercent: null },

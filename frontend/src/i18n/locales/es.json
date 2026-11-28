@@ -359,6 +359,7 @@
     },
     "tiers": {
       "SAFETY_NET": "Colchón de seguridad",
+      "BONDS": "Bonos y fondos en euros",
       "REAL_ESTATE": "Inmobiliario",
       "EQUITY": "Acciones y ETF",
       "CRYPTO": "Cripto",
@@ -407,7 +408,7 @@
       "months": "Meses de gastos a cubrir",
       "allocation": "Reparto objetivo del resto",
       "sum": "Total {{value}} / {{max}}",
-      "allocationHint": "Los cuatro porcentajes deben sumar 100%."
+      "allocationHint": "Los cinco porcentajes deben sumar 100%."
     },
     "targetAmount": "objetivo",
     "diversification": {
