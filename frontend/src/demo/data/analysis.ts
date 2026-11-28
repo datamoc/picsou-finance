@@ -278,6 +278,9 @@ export interface DemoHoldingClassification {
   wealthTier: string | null
   sectorKey: string | null
   countryKey: string | null
+  equityPct?: number | null
+  bondsPct?: number | null
+  cashPct?: number | null
 }
 
 function round2(n: number): number {

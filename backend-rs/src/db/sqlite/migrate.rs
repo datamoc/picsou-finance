@@ -31,6 +31,9 @@ const V7_WEALTH_TIER_BONDS: &str =
 const V8_ROADMAP_FEATURES: &str =
     include_str!("migrations/V8__roadmap_features.sql");
 
+const V9_HOLDING_CLASSIFICATION_MIX: &str =
+    include_str!("migrations/V9__holding_classification_mix.sql");
+
 /// Metadata table tracking applied SQLite schema migrations.
 pub const HISTORY_TABLE: &str = "picsou_sqlite_migrations";
 
@@ -150,6 +153,13 @@ pub fn migrations() -> Vec<SqliteMigration> {
             description: "roadmap features schema",
             sql: V8_ROADMAP_FEATURES,
             checksum: sha256_checksum(V8_ROADMAP_FEATURES),
+            mode: MigrationMode::Transactional,
+        },
+        SqliteMigration {
+            version: "9",
+            description: "holding classification complex mix",
+            sql: V9_HOLDING_CLASSIFICATION_MIX,
+            checksum: sha256_checksum(V9_HOLDING_CLASSIFICATION_MIX),
             mode: MigrationMode::Transactional,
         },
     ]

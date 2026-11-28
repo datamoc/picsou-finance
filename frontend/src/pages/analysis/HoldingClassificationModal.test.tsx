@@ -111,4 +111,51 @@ describe('HoldingClassificationModal', () => {
       }),
     )
   })
+
+  it('supports regional zones and complex product equity/bonds/cash split', async () => {
+    holdingClassification.mockResolvedValue(view)
+    classifyHolding.mockResolvedValue({
+      ...view,
+      countryKey: 'XD',
+      equityPct: 75,
+      bondsPct: 0,
+      cashPct: 25,
+    })
+
+    renderModal(vi.fn())
+    await screen.findByText('common.save')
+
+    chooseSelectOption(screen.getByLabelText('analysis.classification.country'), 'XD')
+    fireEvent.click(screen.getByRole('switch', { name: 'analysis.classification.complexProduct' }))
+
+    fireEvent.change(screen.getByLabelText('analysis.classification.equityPct'), {
+      target: { value: '75' },
+    })
+    fireEvent.change(screen.getByLabelText('analysis.classification.bondsPct'), {
+      target: { value: '10' },
+    })
+    fireEvent.change(screen.getByLabelText('analysis.classification.cashPct'), {
+      target: { value: '25' },
+    })
+
+    // 75 + 10 + 25 = 110 -> Save button must be disabled
+    expect(screen.getByText('common.save')).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText('analysis.classification.bondsPct'), {
+      target: { value: '0' },
+    })
+    expect(screen.getByText('common.save')).toBeEnabled()
+    fireEvent.click(screen.getByText('common.save'))
+
+    await waitFor(() =>
+      expect(classifyHolding).toHaveBeenCalledWith(3, 'AAPL', {
+        sectorKey: null,
+        countryKey: 'XD',
+        wealthTier: null,
+        equityPct: 75,
+        bondsPct: 0,
+        cashPct: 25,
+      }),
+    )
+  })
 })

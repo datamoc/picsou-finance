@@ -306,8 +306,11 @@ column	health_dismissal	dismissed_at	timestamptz
 column	health_dismissal	id	int8
 column	health_dismissal	issue_key	varchar
 column	health_dismissal	member_id	int8
+column	holding_classification	bonds_pct	numeric
+column	holding_classification	cash_pct	numeric
 column	holding_classification	country_key	varchar
 column	holding_classification	created_at	timestamptz
+column	holding_classification	equity_pct	numeric
 column	holding_classification	id	int8
 column	holding_classification	member_id	int8
 column	holding_classification	sector_key	varchar

@@ -241,6 +241,9 @@ handlers.set(key('GET', '/accounts/:id/holdings/:ticker/classification'), (_conf
     wealthTier: saved?.wealthTier ?? null,
     sectorKey: saved?.sectorKey ?? null,
     countryKey: saved?.countryKey ?? null,
+    equityPct: saved?.equityPct ?? null,
+    bondsPct: saved?.bondsPct ?? null,
+    cashPct: saved?.cashPct ?? null,
     inferredSectorKey: ticker.toUpperCase() === 'MC.PA' ? 'consumer_cyclical' : null,
     inferredCountryKey: null,
     profileLooked: ticker.toUpperCase() !== 'FCPE-DEMO',
@@ -248,12 +251,16 @@ handlers.set(key('GET', '/accounts/:id/holdings/:ticker/classification'), (_conf
 })
 handlers.set(key('PUT', '/accounts/:id/holdings/:ticker/classification'), (config, { ticker }) => {
   const body = typeof config.data === 'string' ? JSON.parse(config.data) : {}
+  const hasMix = body.equityPct != null && body.bondsPct != null && body.cashPct != null
   const next = {
-    wealthTier: body.wealthTier ?? null,
+    wealthTier: hasMix ? null : (body.wealthTier ?? null),
     sectorKey: body.sectorKey ?? null,
     countryKey: body.countryKey ?? null,
+    equityPct: hasMix ? body.equityPct : null,
+    bondsPct: hasMix ? body.bondsPct : null,
+    cashPct: hasMix ? body.cashPct : null,
   }
-  if (!next.wealthTier && !next.sectorKey && !next.countryKey) {
+  if (!next.wealthTier && !next.sectorKey && !next.countryKey && !hasMix) {
     demoClassifications.delete(ticker.toUpperCase())
   } else {
     demoClassifications.set(ticker.toUpperCase(), next)

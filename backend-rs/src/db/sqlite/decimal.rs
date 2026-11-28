@@ -381,6 +381,7 @@ pub fn pg_numeric_column_scale(sql: &str, col_name: &str) -> Option<u32> {
         | "target_amount"
         | "alternative_pct"
         | "bonds_pct"
+        | "cash_pct"
         | "crypto_pct"
         | "equity_pct"
         | "monthly_essential_expenses"

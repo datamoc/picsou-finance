@@ -2632,6 +2632,9 @@ export interface HoldingClassificationRequest {
   wealthTier: WealthTier | null
   sectorKey: string | null
   countryKey: string | null
+  equityPct?: number | null
+  bondsPct?: number | null
+  cashPct?: number | null
 }
 
 export interface HoldingClassificationResponse {
@@ -2639,6 +2642,9 @@ export interface HoldingClassificationResponse {
   wealthTier: WealthTier | null
   sectorKey: string | null
   countryKey: string | null
+  equityPct?: number | null
+  bondsPct?: number | null
+  cashPct?: number | null
 }
 
 /**
@@ -2651,6 +2657,9 @@ export interface HoldingClassificationView {
   wealthTier: WealthTier | null
   sectorKey: string | null
   countryKey: string | null
+  equityPct?: number | null
+  bondsPct?: number | null
+  cashPct?: number | null
   inferredSectorKey: string | null
   inferredCountryKey: string | null
   profileLooked: boolean

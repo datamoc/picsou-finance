@@ -10,10 +10,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { useClassifyHolding, useHoldingClassification } from '@/features/analysis/hooks'
-import { translateCountryName } from '@/lib/utils'
+import { cn, formatPercent, parseAmount, translateCountryName } from '@/lib/utils'
 import type {
   HoldingClassificationRequest,
   HoldingClassificationView,
@@ -50,6 +52,9 @@ const SECTOR_KEYS = [
 const UNLISTED_SECTOR = 'private_equity'
 const UNLISTED_COUNTRY = 'XU'
 
+/** Multi-country geographic regions, using ISO 3166-1 user-assigned 2-letter codes (`X*`). */
+const REGION_KEYS = ['XW', 'XD', 'XE', 'XM'] as const
+
 /** The countries the breakdown already knows how to name, ISO 3166-1 alpha-2. */
 const COUNTRY_KEYS = [
   'US', 'FR', 'DE', 'GB', 'NL', 'CH', 'IE', 'LU', 'BE', 'ES', 'IT', 'SE', 'DK', 'FI', 'NO',
@@ -64,6 +69,14 @@ const TIER_KEYS: WealthTier[] = [
   'CRYPTO',
   'ALTERNATIVE',
 ]
+
+function parsePctInput(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (trimmed === '') return 0
+  const n = parseAmount(trimmed)
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null
+  return Math.round(n * 100) / 100
+}
 
 /**
  * The editor body, mounted only once the current classification has loaded and keyed on it, so
@@ -83,19 +96,48 @@ function ClassificationForm({
 }) {
   const { t, i18n } = useTranslation()
   const language = i18n?.resolvedLanguage ?? i18n?.language
+  const hadMix =
+    current.equityPct != null || current.bondsPct != null || current.cashPct != null
 
   const [sector, setSector] = useState(() => current.sectorKey ?? '')
   const [country, setCountry] = useState(() => current.countryKey ?? '')
   const [tier, setTier] = useState<string>(() => current.wealthTier ?? '')
+  const [complex, setComplex] = useState(() => hadMix)
+  const [equityInput, setEquityInput] = useState(() => String(current.equityPct ?? 100))
+  const [bondsInput, setBondsInput] = useState(() => String(current.bondsPct ?? 0))
+  const [cashInput, setCashInput] = useState(() => String(current.cashPct ?? 0))
+
+  const eqVal = parsePctInput(equityInput)
+  const bondsVal = parsePctInput(bondsInput)
+  const cashVal = parsePctInput(cashInput)
+  const mixPartsValid = eqVal != null && bondsVal != null && cashVal != null
+  const mixTotal = mixPartsValid ? Math.round((eqVal + bondsVal + cashVal) * 100) / 100 : null
+  const mixValid = !complex || (mixTotal != null && Math.abs(mixTotal - 100) < 0.005)
 
   function submit() {
-    // Empty means "stop overriding this field" — the backend drops the row once all three are
-    // null, so clearing a mistake restores the provider's own answer rather than freezing a blank.
-    onSubmit({
+    if (!mixValid) return
+    const base: HoldingClassificationRequest = {
       sectorKey: sector === '' ? null : sector,
       countryKey: country === '' ? null : country,
-      wealthTier: tier === '' ? null : (tier as WealthTier),
-    })
+      wealthTier: complex ? null : tier === '' ? null : (tier as WealthTier),
+    }
+    if (complex && eqVal != null && bondsVal != null && cashVal != null) {
+      onSubmit({
+        ...base,
+        equityPct: eqVal,
+        bondsPct: bondsVal,
+        cashPct: cashVal,
+      })
+    } else if (hadMix) {
+      onSubmit({
+        ...base,
+        equityPct: null,
+        bondsPct: null,
+        cashPct: null,
+      })
+    } else {
+      onSubmit(base)
+    }
   }
 
   const inferredSector = current.inferredSectorKey
@@ -110,7 +152,6 @@ function ClassificationForm({
           </Label>
           <NativeSelect
             id="classification-sector"
-            
             value={sector}
             onChange={(e) => setSector(e.target.value)}
           >
@@ -142,11 +183,16 @@ function ClassificationForm({
           </Label>
           <NativeSelect
             id="classification-country"
-            
             value={country}
             onChange={(e) => setCountry(e.target.value)}
           >
             <option value="">{t('analysis.classification.inherit')}</option>
+            {REGION_KEYS.map((key) => (
+              <option key={key} value={key}>
+                {translateCountryName(t, key, language)}
+              </option>
+            ))}
+            <option disabled>──────────</option>
             {COUNTRY_KEYS.map((key) => (
               <option key={key} value={key}>
                 {translateCountryName(t, key, language)}
@@ -166,32 +212,105 @@ function ClassificationForm({
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="classification-tier">{t('analysis.classification.tier')}</Label>
-          <NativeSelect
-            id="classification-tier"
-            
-            value={tier}
-            onChange={(e) => setTier(e.target.value)}
-          >
-            <option value="">{t('analysis.classification.inherit')}</option>
-            {TIER_KEYS.map((key) => (
-              <option key={key} value={key}>
-                {t(`analysis.tiers.${key}`, key)}
-              </option>
-            ))}
-          </NativeSelect>
-          <p className="text-sm text-muted-foreground">
-            {t('analysis.classification.tierHint')}
-          </p>
+        <div className="space-y-3 rounded-lg border border-border/60 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="classification-complex">
+                {t('analysis.classification.complexProduct')}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t('analysis.classification.complexProductHint')}
+              </p>
+            </div>
+            <Switch
+              id="classification-complex"
+              checked={complex}
+              onCheckedChange={setComplex}
+            />
+          </div>
+
+          {complex && (
+            <div className="space-y-2 pt-1">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="classification-equity-pct" className="text-xs">
+                    {t('analysis.classification.equityPct')}
+                  </Label>
+                  <Input
+                    id="classification-equity-pct"
+                    inputMode="decimal"
+                    value={equityInput}
+                    onChange={(e) => setEquityInput(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="classification-bonds-pct" className="text-xs">
+                    {t('analysis.classification.bondsPct')}
+                  </Label>
+                  <Input
+                    id="classification-bonds-pct"
+                    inputMode="decimal"
+                    value={bondsInput}
+                    onChange={(e) => setBondsInput(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="classification-cash-pct" className="text-xs">
+                    {t('analysis.classification.cashPct')}
+                  </Label>
+                  <Input
+                    id="classification-cash-pct"
+                    inputMode="decimal"
+                    value={cashInput}
+                    onChange={(e) => setCashInput(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs tabular-nums">
+                <span className={cn(mixValid ? 'text-muted-foreground' : 'font-medium text-destructive')}>
+                  {mixTotal != null
+                    ? t('analysis.classification.mixTotal', {
+                        total: formatPercent(mixTotal, { fractionDigits: mixTotal % 1 === 0 ? 0 : 1 }, language),
+                      })
+                    : t('analysis.classification.mixMustEqual100')}
+                </span>
+                {!mixValid && (
+                  <span className="text-destructive">
+                    {t('analysis.classification.mixMustEqual100')}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+
+        {!complex && (
+          <div className="space-y-2">
+            <Label htmlFor="classification-tier">{t('analysis.classification.tier')}</Label>
+            <NativeSelect
+              id="classification-tier"
+              value={tier}
+              onChange={(e) => setTier(e.target.value)}
+            >
+              <option value="">{t('analysis.classification.inherit')}</option>
+              {TIER_KEYS.map((key) => (
+                <option key={key} value={key}>
+                  {t(`analysis.tiers.${key}`, key)}
+                </option>
+              ))}
+            </NativeSelect>
+            <p className="text-sm text-muted-foreground">
+              {t('analysis.classification.tierHint')}
+            </p>
+          </div>
+        )}
       </div>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose}>
           {t('common.cancel')}
         </Button>
-        <Button type="button" onClick={submit} disabled={saving}>
+        <Button type="button" onClick={submit} disabled={saving || !mixValid}>
           {t('common.save')}
         </Button>
       </DialogFooter>
@@ -246,7 +365,7 @@ export function HoldingClassificationModal({
         ) : (
           <ClassificationForm
             // Remounts when the loaded classification changes, so the lazy initializers re-seed.
-            key={`${current.data.ticker}-${current.data.sectorKey}-${current.data.countryKey}-${current.data.wealthTier}`}
+            key={`${current.data.ticker}-${current.data.sectorKey}-${current.data.countryKey}-${current.data.wealthTier}-${current.data.equityPct}-${current.data.bondsPct}-${current.data.cashPct}`}
             current={current.data}
             saving={classify.isPending}
             onSubmit={(body) =>

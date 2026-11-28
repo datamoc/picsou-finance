@@ -198,6 +198,28 @@ pub async fn pyramid(
         let account_total = weigh(live, share);
 
         if !holdings::exists_for_readable_account(&mut *conn, account.id, member_id).await? {
+            if let Some(key) = tracked.get(&account.id)
+                && let Some(mix) = classifications.get(key).and_then(|c| c.complex_mix())
+            {
+                tally.total_assets += account_total;
+                for (tier, part) in split_by_mix(account_total, mix) {
+                    if part.is_zero() {
+                        continue;
+                    }
+                    if current_account && tier == WealthTier::SafetyNet {
+                        tally.daily_cash += part;
+                    } else {
+                        tally.by_tier[index(tier)] += part;
+                        tally.accounts_by_tier[index(tier)].push(TierAccount {
+                            account_id: account.id,
+                            name: account.name.clone(),
+                            color: account.color.clone(),
+                            value_eur: part,
+                        });
+                    }
+                }
+                continue;
+            }
             let tier = tracked.get(&account.id).map_or(uninvested_tier, |key| {
                 tracked_fund::tier(key, &classifications)
             });
@@ -235,6 +257,18 @@ pub async fn pyramid(
                 continue;
             };
             let value = weigh(current, share);
+            let upper = line.ticker.to_uppercase();
+            if let Some(mix) = classifications.get(&upper).and_then(|c| c.complex_mix()) {
+                for (tier, part) in split_by_mix(value, mix) {
+                    if part.is_zero() {
+                        continue;
+                    }
+                    let slot = &mut per_tier[index(tier)];
+                    *slot = Some(slot.map_or(part, |v| v + part));
+                }
+                lines_total += value;
+                continue;
+            }
             let tier = tier_for(
                 &line.ticker,
                 line.provider_wealth_tier,
@@ -247,7 +281,7 @@ pub async fn pyramid(
             lines_total += value;
             if tier == WealthTier::Crypto {
                 tally.crypto_detailed += value;
-                if TOP_TIER_COINS.contains(&line.ticker.to_uppercase().as_str()) {
+                if TOP_TIER_COINS.contains(&upper.as_str()) {
                     tally.crypto_top_ten += value;
                 }
             }
@@ -284,6 +318,36 @@ pub async fn pyramid(
         tally.by_tier[index(WealthTier::RealEstate)] -= property_debt;
     }
     Ok(assemble(tally, &profile, property.loan_to_value))
+}
+
+/// Splits a holding's EUR value across Equity, Bonds and SafetyNet (monetary cash) according to a
+/// complex product's percentage breakdown (`equity_pct + bonds_pct + cash_pct == 100`), assigning
+/// any sub-unit rounding remainder to the last non-zero bucket so the total is exact and 0% buckets
+/// never receive dust.
+fn split_by_mix(value: Decimal, mix: (Decimal, Decimal, Decimal)) -> [(WealthTier, Decimal); 3] {
+    let (eq_pct, bonds_pct, cash_pct) = mix;
+    let eq_raw = if eq_pct.is_zero() {
+        Decimal::ZERO
+    } else {
+        divide(value * eq_pct, Decimal::ONE_HUNDRED, SCALE, HALF_UP)
+    };
+    let bonds_raw = if bonds_pct.is_zero() {
+        Decimal::ZERO
+    } else {
+        divide(value * bonds_pct, Decimal::ONE_HUNDRED, SCALE, HALF_UP)
+    };
+    let (eq, bonds, cash) = if !cash_pct.is_zero() {
+        (eq_raw, bonds_raw, value - eq_raw - bonds_raw)
+    } else if !bonds_pct.is_zero() {
+        (eq_raw, value - eq_raw, Decimal::ZERO)
+    } else {
+        (value, Decimal::ZERO, Decimal::ZERO)
+    };
+    [
+        (WealthTier::Equity, eq),
+        (WealthTier::Bonds, bonds),
+        (WealthTier::SafetyNet, cash),
+    ]
 }
 
 /// The member's override, then the provider's tier, then the coin registry, then the account.
@@ -529,4 +593,30 @@ fn leverage_bonus(loan_to_value: Option<Decimal>) -> Decimal {
         Decimal::ZERO,
     );
     d(5, 0) * ramp * decay
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_by_mix_preserves_total_and_keeps_zero_buckets_empty() {
+        let parts = split_by_mix(
+            Decimal::new(1000_00, 2),
+            (Decimal::from(75), Decimal::ZERO, Decimal::from(25)),
+        );
+        assert_eq!(parts[0], (WealthTier::Equity, Decimal::new(750_00, 2)));
+        assert_eq!(parts[1], (WealthTier::Bonds, Decimal::ZERO));
+        assert_eq!(parts[2], (WealthTier::SafetyNet, Decimal::new(250_00, 2)));
+        let sum: Decimal = parts.iter().map(|(_, v)| *v).sum();
+        assert_eq!(sum, Decimal::new(1000_00, 2));
+
+        // Non-divisible amount (100 / 3) with 0% cash must keep cash exactly zero.
+        let parts2 = split_by_mix(
+            Decimal::new(100_00, 2),
+            (Decimal::new(33_33, 2), Decimal::new(66_67, 2), Decimal::ZERO),
+        );
+        assert_eq!(parts2[2], (WealthTier::SafetyNet, Decimal::ZERO));
+        assert_eq!(parts2[0].1 + parts2[1].1, Decimal::new(100_00, 2));
+    }
 }

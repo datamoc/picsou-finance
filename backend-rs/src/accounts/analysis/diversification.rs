@@ -286,19 +286,29 @@ fn push_axis_unclassified(
     });
 }
 
-/// The member's override first, then the provider's tier, then the coin registry; untiered lines
-/// count as equity. Matches `pyramid::tier_for` so crypto held in a brokerage account is never
-/// reported as unclassified equity.
-fn is_equity_line(
+/// Share in `[0, 1]` of a line that belongs to the equity sleeve.
+/// Complex products contribute only their declared `equity_pct / 100`; otherwise the member's
+/// tier override, provider tier, and coin registry decide `1` vs `0`.
+fn equity_weight(
     over: Option<&HoldingClassification>,
     provider: Option<WealthTier>,
     is_coin: bool,
-) -> bool {
+) -> Decimal {
+    if let Some((eq_pct, _, _)) = over.and_then(HoldingClassification::complex_mix) {
+        if eq_pct <= Decimal::ZERO {
+            return Decimal::ZERO;
+        }
+        return divide(eq_pct, Decimal::ONE_HUNDRED, SCALE, HALF_UP);
+    }
     let tier = over
         .and_then(|o| o.wealth_tier)
         .or(provider)
         .or(is_coin.then_some(WealthTier::Crypto));
-    tier.is_none_or(|t| t == WealthTier::Equity)
+    if tier.is_none_or(|t| t == WealthTier::Equity) {
+        Decimal::ONE
+    } else {
+        Decimal::ZERO
+    }
 }
 
 pub async fn diversification(
@@ -342,11 +352,16 @@ pub async fn diversification(
                 continue;
             }
             let ticker = line.ticker.to_uppercase();
-            if !is_equity_line(
+            let weight = equity_weight(
                 overrides.get(&ticker),
                 line.provider_wealth_tier,
                 coins.contains(&ticker),
-            ) {
+            );
+            if weight <= Decimal::ZERO {
+                continue;
+            }
+            let value = set_scale(value * weight, SCALE, HALF_UP);
+            if value.is_zero() {
                 continue;
             }
             match value_by_ticker.iter_mut().find(|(t, _)| *t == ticker) {
@@ -370,14 +385,15 @@ pub async fn diversification(
     let tracked = tracked_fund::keys(&mut *conn, &accounts.iter().collect::<Vec<_>>()).await?;
     for account in accounts.iter().filter(|a| tracked.contains_key(&a.id)) {
         let ticker = tracked[&account.id].clone();
-        if !is_equity_line(overrides.get(&ticker), None, false) {
+        let weight = equity_weight(overrides.get(&ticker), None, false);
+        if weight <= Decimal::ZERO {
             continue;
         }
         let share = shares.get(&account.id).copied().unwrap_or_default();
         let live = valuation::valuation(&mut *conn, prices, account, today)
             .await?
             .live_eur;
-        let value = weigh(live, share);
+        let value = set_scale(weigh(live, share) * weight, SCALE, HALF_UP);
         // An overdrawn account holds no fund: it adds no negative line.
         if value <= Decimal::ZERO {
             continue;

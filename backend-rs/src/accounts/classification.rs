@@ -6,6 +6,7 @@ use std::sync::LazyLock;
 
 use axum::extract::State;
 use regex::Regex;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;
@@ -36,9 +37,24 @@ pub struct HoldingClassification {
     pub wealth_tier: Option<WealthTier>,
     pub sector_key: Option<String>,
     pub country_key: Option<String>,
+    pub equity_pct: Option<Decimal>,
+    pub bonds_pct: Option<Decimal>,
+    pub cash_pct: Option<Decimal>,
 }
 
-const COLUMNS: &str = "id, ticker, wealth_tier, sector_key, country_key";
+impl HoldingClassification {
+    /// Returns `(equity_pct, bonds_pct, cash_pct)` when the member declared a multi-asset
+    /// complex product split (summing to 100%).
+    pub fn complex_mix(&self) -> Option<(Decimal, Decimal, Decimal)> {
+        match (self.equity_pct, self.bonds_pct, self.cash_pct) {
+            (Some(e), Some(b), Some(c)) => Some((e, b, c)),
+            _ => None,
+        }
+    }
+}
+
+const COLUMNS: &str =
+    "id, ticker, wealth_tier, sector_key, country_key, equity_pct, bonds_pct, cash_pct";
 
 /// findByMemberId keyed by upper-cased ticker, as every reader looks it up.
 pub async fn overrides_of<'e>(
@@ -80,6 +96,12 @@ pub struct HoldingClassificationView {
     wealth_tier: Option<WealthTier>,
     sector_key: Option<String>,
     country_key: Option<String>,
+    #[serde(with = "crate::accounts::jdecimal::option")]
+    equity_pct: Option<Decimal>,
+    #[serde(with = "crate::accounts::jdecimal::option")]
+    bonds_pct: Option<Decimal>,
+    #[serde(with = "crate::accounts::jdecimal::option")]
+    cash_pct: Option<Decimal>,
     inferred_sector_key: Option<String>,
     inferred_country_key: Option<String>,
     profile_looked: bool,
@@ -91,6 +113,12 @@ pub struct HoldingClassificationRequest {
     wealth_tier: Option<WealthTier>,
     sector_key: Option<String>,
     country_key: Option<String>,
+    #[serde(default)]
+    equity_pct: Option<Decimal>,
+    #[serde(default)]
+    bonds_pct: Option<Decimal>,
+    #[serde(default)]
+    cash_pct: Option<Decimal>,
 }
 
 static COUNTRY: LazyLock<Regex> = LazyLock::new(|| Regex::new("^[A-Z]{2}$").expect("regex"));
@@ -103,12 +131,42 @@ impl Validate for HoldingClassificationRequest {
                 "countryKey",
                 self.country_key.as_deref(),
                 &COUNTRY,
-                "must be an ISO 3166-1 alpha-2 country code",
+                "must be an ISO 3166-1 alpha-2 country or region code",
             );
+        let any_mix =
+            self.equity_pct.is_some() || self.bonds_pct.is_some() || self.cash_pct.is_some();
+        if any_mix {
+            match (self.equity_pct, self.bonds_pct, self.cash_pct) {
+                (Some(eq), Some(bo), Some(ca)) => {
+                    let hundred = Decimal::ONE_HUNDRED;
+                    if eq < Decimal::ZERO || eq > hundred {
+                        errors.add("equityPct", "must be between 0 and 100");
+                    }
+                    if bo < Decimal::ZERO || bo > hundred {
+                        errors.add("bondsPct", "must be between 0 and 100");
+                    }
+                    if ca < Decimal::ZERO || ca > hundred {
+                        errors.add("cashPct", "must be between 0 and 100");
+                    }
+                    if eq + bo + ca != hundred {
+                        errors.add(
+                            "equityPct",
+                            "equityPct + bondsPct + cashPct must equal 100",
+                        );
+                    }
+                }
+                _ => {
+                    errors.add(
+                        "equityPct",
+                        "equityPct, bondsPct, and cashPct must all be provided together",
+                    );
+                }
+            }
+        }
     }
 }
 
-/// HoldingClassificationResponse: all three null means no override is in force.
+/// HoldingClassificationResponse: all fields null means no override is in force.
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -117,6 +175,12 @@ pub struct HoldingClassificationResponse {
     wealth_tier: Option<WealthTier>,
     sector_key: Option<String>,
     country_key: Option<String>,
+    #[serde(with = "crate::accounts::jdecimal::option")]
+    equity_pct: Option<Decimal>,
+    #[serde(with = "crate::accounts::jdecimal::option")]
+    bonds_pct: Option<Decimal>,
+    #[serde(with = "crate::accounts::jdecimal::option")]
+    cash_pct: Option<Decimal>,
 }
 
 /// Readable, not owner-gated: looking at how a shared holding is classified is not a write.
@@ -136,6 +200,9 @@ async fn view(
         wealth_tier: found.as_ref().and_then(|c| c.wealth_tier),
         sector_key: found.as_ref().and_then(|c| c.sector_key.clone()),
         country_key: found.as_ref().and_then(|c| c.country_key.clone()),
+        equity_pct: found.as_ref().and_then(|c| c.equity_pct),
+        bonds_pct: found.as_ref().and_then(|c| c.bonds_pct),
+        cash_pct: found.as_ref().and_then(|c| c.cash_pct),
         inferred_sector_key: profile.as_ref().and_then(|p| p.sector_key.clone()),
         inferred_country_key: profile.as_ref().and_then(|p| p.country_key.clone()),
         profile_looked: profile
@@ -156,9 +223,13 @@ async fn classify(
     access::require_owner(&mut tx.as_handle(), id, auth.member_id).await?;
     let upper = java_trim(&ticker).to_uppercase();
     let existing = find(&mut tx, auth.member_id, &upper).await?;
-    if request.wealth_tier.is_none()
+    let has_mix = request.equity_pct.is_some();
+    // When a complex mix is declared, it replaces a single wealth tier.
+    let effective_tier = if has_mix { None } else { request.wealth_tier };
+    if effective_tier.is_none()
         && request.sector_key.is_none()
         && request.country_key.is_none()
+        && !has_mix
     {
         // Every field cleared means "stop overriding": drop the row rather than keep a blank.
         if let Some(row) = existing {
@@ -173,31 +244,42 @@ async fn classify(
             wealth_tier: None,
             sector_key: None,
             country_key: None,
+            equity_pct: None,
+            bonds_pct: None,
+            cash_pct: None,
         }));
     }
     let now = state.clock.now();
     let saved: HoldingClassification = match existing {
         Some(row) => db::query_as(&format!(
             "UPDATE holding_classification SET ticker = $2, wealth_tier = $3, sector_key = $4, \
-             country_key = $5, updated_at = $6 WHERE id = $1 RETURNING {COLUMNS}"
+             country_key = $5, equity_pct = $6, bonds_pct = $7, cash_pct = $8, updated_at = $9 \
+             WHERE id = $1 RETURNING {COLUMNS}"
         ))
         .bind(row.id)
         .bind(&upper)
-        .bind(request.wealth_tier)
+        .bind(effective_tier)
         .bind(&request.sector_key)
         .bind(&request.country_key)
+        .bind(request.equity_pct)
+        .bind(request.bonds_pct)
+        .bind(request.cash_pct)
         .bind(now)
         .fetch_one(&mut tx)
         .await?,
         None => db::query_as(&format!(
-            "INSERT INTO holding_classification (member_id, ticker, wealth_tier, sector_key, country_key, \
-             created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $6) RETURNING {COLUMNS}"
+            "INSERT INTO holding_classification (member_id, ticker, wealth_tier, sector_key, \
+             country_key, equity_pct, bonds_pct, cash_pct, created_at, updated_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9) RETURNING {COLUMNS}"
         ))
         .bind(auth.member_id)
         .bind(&upper)
-        .bind(request.wealth_tier)
+        .bind(effective_tier)
         .bind(&request.sector_key)
         .bind(&request.country_key)
+        .bind(request.equity_pct)
+        .bind(request.bonds_pct)
+        .bind(request.cash_pct)
         .bind(now)
         .fetch_one(&mut tx)
         .await?,
@@ -208,5 +290,52 @@ async fn classify(
         wealth_tier: saved.wealth_tier,
         sector_key: saved.sector_key,
         country_key: saved.country_key,
+        equity_pct: saved.equity_pct,
+        bonds_pct: saved.bonds_pct,
+        cash_pct: saved.cash_pct,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validates_complex_mix_and_region_codes() {
+        let valid = HoldingClassificationRequest {
+            wealth_tier: None,
+            sector_key: None,
+            country_key: Some("XD".into()),
+            equity_pct: Some(Decimal::from(75)),
+            bonds_pct: Some(Decimal::ZERO),
+            cash_pct: Some(Decimal::from(25)),
+        };
+        let mut errs = Errors::default();
+        valid.validate(&mut errs);
+        assert!(!errs.has("equityPct") && !errs.has("bondsPct") && !errs.has("cashPct") && !errs.has("countryKey"), "valid mix should pass: {errs:?}");
+
+        let bad_sum = HoldingClassificationRequest {
+            wealth_tier: None,
+            sector_key: None,
+            country_key: Some("XW".into()),
+            equity_pct: Some(Decimal::from(75)),
+            bonds_pct: Some(Decimal::from(10)),
+            cash_pct: Some(Decimal::from(25)),
+        };
+        let mut errs = Errors::default();
+        bad_sum.validate(&mut errs);
+        assert!(errs.has("equityPct"), "sum 110 must fail");
+
+        let partial = HoldingClassificationRequest {
+            wealth_tier: None,
+            sector_key: None,
+            country_key: None,
+            equity_pct: Some(Decimal::from(75)),
+            bonds_pct: None,
+            cash_pct: Some(Decimal::from(25)),
+        };
+        let mut errs = Errors::default();
+        partial.validate(&mut errs);
+        assert!(errs.has("equityPct"), "partial mix must fail");
+    }
 }

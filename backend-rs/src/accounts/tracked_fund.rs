@@ -216,6 +216,9 @@ mod tests {
             wealth_tier: tier,
             sector_key: None,
             country_key: None,
+            equity_pct: None,
+            bonds_pct: None,
+            cash_pct: None,
         }
     }
 
