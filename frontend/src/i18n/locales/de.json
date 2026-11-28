@@ -1003,6 +1003,7 @@
       "corum": "CORUM-SCPI und CORUM-Life-Lebensversicherung: Anteile, Bewertung und Umsätze",
       "sofidy": "Sofidy-SCPI-Anteile zum Rücknahmepreis",
       "louve": "Über Louve Invest gekaufte SCPI-Anteile, nur lesend, zum Rücknahmepreis",
+      "lucya": "Fügen Sie Ihre Lucya-Lebensversicherungen und PER-Verträge hinzu; melden Sie sich erneut an, um ihren Wert zu aktualisieren.",
       "property": "Haus, Wohnung, Grundstück…",
       "revolut": "Phone + passcode, on-demand sync",
       "fortuneo": "Fortuneo-Konten synchronisieren",
@@ -1408,6 +1409,9 @@
     },
     "bourso": {
       "title": "BoursoBank",
+      "passkeyConnect": "Mit Passkey oder Sicherheitsschlüssel anmelden",
+      "passkeyWaiting": "Warten auf den Sicherheitsschlüssel…",
+      "passkeyFailed": "Die Anmeldung mit Passkey ist fehlgeschlagen oder wurde nicht bestätigt. Prüfen Sie den Passkey Ihres BoursoBank-Kontos und versuchen Sie es erneut.",
       "customerId": "Kundennummer",
       "password": "Passwort",
       "appValidationPrompt": "Öffnen Sie die BoursoBank-App und bestätigen Sie die Anmeldung.",
@@ -1971,6 +1975,26 @@
         "formatChanged": "Das Format der CORUM-Website hat sich geändert. Ihre vorhandenen Daten wurden behalten.",
         "invalidData": "CORUM hat inkonsistente Daten geliefert. Ihre vorhandenen Daten wurden behalten.",
         "serverError": "CORUM ist nicht erreichbar. Bitte erneut versuchen."
+      }
+    },
+    "lucya": {
+      "title": "Lucya",
+      "identifier": "Kennung",
+      "password": "Passwort",
+      "refresh": "Aktualisieren",
+      "refreshing": "Verträge werden gelesen…",
+      "scope": "Liest den Wert Ihrer Lucya-Lebensversicherungen und PER-Verträge. Nichts wird gespeichert, weder eine Sitzung noch Ihr Passwort: Melden Sie sich hier erneut an, um die Werte zu aktualisieren.",
+      "success_one": "{{count}} Vertrag aktualisiert.",
+      "success_other": "{{count}} Verträge aktualisiert.",
+      "errors": {
+        "invalidCredentials": "Lucya hat die Kennung oder das Passwort abgelehnt.",
+        "captchaBlocked": "Lucya verlangt eine Anti-Roboter-Prüfung, die Picsou nicht besteht. Versuchen Sie es später erneut.",
+        "mfaTypeUnsupported": "Dieses Konto verlangt einen zweiten Faktor, den Picsou noch nicht unterstützt.",
+        "tooManyAttempts": "Zu viele Versuche. Warten Sie, bevor Sie es erneut versuchen.",
+        "portfolioIncomplete": "Die gelesenen Verträge ergeben nicht die von Lucya angezeigte Summe. Ihre vorhandenen Daten wurden beibehalten.",
+        "formatChanged": "Das Format der Lucya-Website hat sich geändert. Ihre vorhandenen Daten wurden beibehalten.",
+        "invalidData": "Prüfen Sie die eingegebene Kennung und das Passwort.",
+        "serverError": "Lucya ist vorübergehend nicht erreichbar. Bitte versuchen Sie es erneut."
       }
     },
     "sofidy": {
@@ -3874,6 +3898,10 @@
     "autologinFailed": {
       "title": "Anmeldung nicht möglich",
       "description": "Picsou konnte deine Sitzung nicht automatisch öffnen. Beende Picsou über sein Symbol im Infobereich und starte es erneut."
+    },
+    "hello": {
+      "button": "Mit Windows Hello fortfahren",
+      "error": "Die Entsperrung mit Windows Hello ist fehlgeschlagen. Versuche es erneut oder melde dich mit deinem Passwort an."
     },
     "update": {
       "bannerTitle": "Picsou {{version}} ist verfügbar",

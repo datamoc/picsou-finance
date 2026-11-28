@@ -71,6 +71,9 @@ pub struct Inner {
     pub desktop_gate_cookie_secret: String,
     /// Single-use latch for `GET /api/auth/desktop-bootstrap`.
     pub desktop_bootstrap_consumed: AtomicBool,
+    /// Single-use Windows Hello unlock code and its issue time, for
+    /// `GET /api/auth/desktop-hello-bootstrap`. Taken on every read, so a code works once.
+    pub desktop_hello_pending: std::sync::Mutex<Option<(String, chrono::DateTime<chrono::Utc>)>>,
     pub login_timing: TimingEqualizer,
     pub access_key_usage: UsageThrottle,
     pub bearer_authenticators: Vec<Arc<dyn BearerAuthenticator>>,
@@ -166,6 +169,7 @@ impl AppState {
             setup_complete: AtomicBool::new(false),
             desktop_gate_cookie_secret,
             desktop_bootstrap_consumed: AtomicBool::new(false),
+            desktop_hello_pending: std::sync::Mutex::new(None),
             login_timing: TimingEqualizer::default(),
             access_key_usage: UsageThrottle::default(),
             bearer_authenticators: identity::bearer_authenticators(),

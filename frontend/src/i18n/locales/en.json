@@ -1310,6 +1310,7 @@
       "corum": "CORUM SCPI and CORUM Life insurance: units, valuation and operations",
       "sofidy": "Sofidy SCPI units, at the withdrawal price",
       "louve": "SCPI units bought through Louve Invest, read-only, at the withdrawal price",
+      "lucya": "Add your Lucya life insurance and PER contracts; sign in again to update their value.",
       "property": "House, apartment, land…",
       "fortuneo": "Sync your Fortuneo accounts",
       "caisseEpargne": "Current account, Livret A, LDDS, PEL, LEP, PER, life insurance, loans and cards at Caisse d'Epargne",
@@ -1757,6 +1758,9 @@
     },
     "bourso": {
       "title": "BoursoBank",
+      "passkeyConnect": "Sign in with a passkey or security key",
+      "passkeyWaiting": "Waiting for your security key…",
+      "passkeyFailed": "Passkey sign-in failed or was not confirmed. Check that your BoursoBank account has a passkey, then try again.",
       "customerId": "Client number",
       "password": "Password",
       "appValidationPrompt": "Open the BoursoBank app and approve the sign-in.",
@@ -2234,6 +2238,26 @@
         "formatChanged": "The CORUM website format changed. Your existing data was kept.",
         "invalidData": "CORUM returned inconsistent data. Your existing data was kept.",
         "serverError": "Could not reach CORUM. Please try again."
+      }
+    },
+    "lucya": {
+      "title": "Lucya",
+      "identifier": "Identifier",
+      "password": "Password",
+      "refresh": "Refresh",
+      "refreshing": "Reading the contracts…",
+      "scope": "Reads the value of your Lucya life insurance and PER contracts. Nothing is kept, neither a session nor your password: to update the values, sign in here again.",
+      "success_one": "{{count}} contract updated.",
+      "success_other": "{{count}} contracts updated.",
+      "errors": {
+        "invalidCredentials": "Lucya refused the identifier or the password.",
+        "captchaBlocked": "Lucya asks for an anti-robot check that Picsou does not pass. Try again later.",
+        "mfaTypeUnsupported": "This account asks for a second factor that Picsou cannot handle yet.",
+        "tooManyAttempts": "Too many attempts. Wait before trying again.",
+        "portfolioIncomplete": "The contracts read do not add up to the total Lucya shows. Your existing data was kept.",
+        "formatChanged": "The Lucya website format changed. Your existing data was kept.",
+        "invalidData": "Check the identifier and password you typed.",
+        "serverError": "Lucya is temporarily unavailable. Please try again."
       }
     },
     "sofidy": {
@@ -3874,6 +3898,10 @@
     "autologinFailed": {
       "title": "Could not sign you in",
       "description": "Picsou could not open your session automatically. Quit Picsou from its tray icon, then start it again."
+    },
+    "hello": {
+      "button": "Continue with Windows Hello",
+      "error": "Windows Hello unlock failed. Try again or sign in with your password."
     },
     "update": {
       "bannerTitle": "Picsou {{version}} is available",

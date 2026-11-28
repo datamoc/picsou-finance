@@ -573,6 +573,8 @@ pub const NATIVE_SIDECAR_URLS: &[(&str, &str, &str)] = &[
     // Natixis spreads over three hosts, so it has no single default: empty means those. Only a
     // stub on this machine is accepted.
     ("natixis", "NATIXIS_BASE_URL", ""),
+    // Only a stub on this machine replaces the real site.
+    ("lucya", "LUCYA_BASE_URL", ""),
 ];
 
 /// Sidecars with built-in native Rust implementations (opted into via `APP_NATIVE_SIDECARS=true`

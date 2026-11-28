@@ -214,6 +214,14 @@ export const cryptoWalletApi = {
 // --- BoursoBank ---
 
 export const boursoApi = {
+  /** Whether this install can ask for a passkey (Picsou Desktop). */
+  getPasskeyAvailability: () =>
+    api.get<{ available: boolean }>('/bourso/auth/passkey').then(r => r.data),
+  /** Answers once the passkey prompt is confirmed and the first import is queued. */
+  connectWithPasskey: (customerId: string) =>
+    api
+      .post<BoursoSessionStatus>('/bourso/auth/passkey', { customerId }, { timeout: 240_000 })
+      .then(r => r.data),
   initiateAuth: (customerId: string, password: string) =>
     api
       .post<BoursoAuthInitResponse>('/bourso/auth/initiate', { customerId, password })
@@ -556,6 +564,19 @@ export const natixisApi = {
   /** Answers once the passkey prompt is confirmed and the first import is queued. */
   connectWithPasskey: (email: string) =>
     api.post<NatixisSessionStatus>('/natixis/auth/passkey', { email }).then(r => r.data),
+}
+
+// --- Lucya (life insurance and PER): nothing is stored, signing in is the refresh ---
+
+export const lucyaApi = {
+  refresh: (identifier: string, password: string) =>
+    api
+      .post<{ contractCount: number }>(
+        '/lucya/refresh',
+        { identifier, password },
+        { skipGlobalErrorRedirect: true },
+      )
+      .then(r => r.data),
 }
 
 // --- CIC online banking (livrets the PSD2 connection does not expose) ---

@@ -30,6 +30,8 @@ const FRAMEWORK_ROUTES: &[(&str, &str)] = &[
     ("POST", "/api/setup/desktop-quick-start"),
     ("GET", "/api/auth/desktop-bootstrap"),
     ("POST", "/api/auth/desktop-autologin"),
+    ("POST", "/api/auth/desktop-hello-unlock"),
+    ("GET", "/api/auth/desktop-hello-bootstrap"),
     ("GET", "/api/desktop/lock"),
     ("PUT", "/api/desktop/lock"),
     // Desktop-only interactive WebView bank connector endpoints (additive, not in Java).
@@ -47,6 +49,11 @@ const FRAMEWORK_ROUTES: &[(&str, &str)] = &[
     // Natixis passkey sign-in through the desktop shell.
     ("GET", "/api/natixis/auth/passkey"),
     ("POST", "/api/natixis/auth/passkey"),
+    // BoursoBank passkey sign-in through the desktop shell.
+    ("GET", "/api/bourso/auth/passkey"),
+    ("POST", "/api/bourso/auth/passkey"),
+    // Lucya refresh by signing in (nothing stored).
+    ("POST", "/api/lucya/refresh"),
 ];
 
 /// Spring and axum share the {name} syntax; a regex constraint ({id:\d+}) and the variable name

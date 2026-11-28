@@ -13,6 +13,7 @@ pub mod cmes;
 pub mod common;
 pub mod degiro;
 pub mod euro_info;
+pub mod lucya;
 pub mod natixis;
 pub mod sofidy;
 
@@ -178,7 +179,14 @@ impl NativeSidecars {
             "natixis-auth",
             Arc::new(natixis::NativeNatixis::with_config(natixis)),
         );
-        registry.register("bourso-auth", Arc::new(bourso::NativeBourso::new()));
+        let bourso = bourso::BoursoConfig {
+            passkey_bridge: natixis::PasskeyBridge::from_config(config),
+            ..Default::default()
+        };
+        registry.register(
+            "bourso-auth",
+            Arc::new(bourso::NativeBourso::with_config(bourso)),
+        );
         registry
     }
 

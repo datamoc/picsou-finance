@@ -785,6 +785,69 @@ async fn an_account_the_member_deleted_is_not_resurrected() {
     );
 }
 
+#[tokio::test]
+async fn a_new_sign_in_brings_deleted_accounts_back() {
+    let sidecar = MockServer::start().await;
+    answer(
+        &sidecar,
+        "/initiate",
+        json!({ "mfaRequired": false, "sessionState": "plain-state" }),
+    )
+    .await;
+    answer(&sidecar, "/accounts", json!([checking("20810.50")])).await;
+    let app = app_with_sidecar(URL, &sidecar).await;
+    let (client, member_id) = admin(&app).await;
+    // The deleted account of this connector, a deleted copy whose IBAN a live Enable Banking
+    // row holds, and a deleted manual account that only names the same provider.
+    for (external_id, provider, iban, deleted) in [
+        (Some("bourso_chk-1"), "BoursoBank", None, true),
+        (Some("bourso_old"), "BoursoBank", Some(IBAN), true),
+        (
+            Some("eb-account-id"),
+            "Boursorama Banque",
+            Some(IBAN),
+            false,
+        ),
+        (None, "BoursoBank", None, true),
+    ] {
+        let deleted_at = if deleted { "now()" } else { "NULL" };
+        picsou::db::query(&format!(
+            "INSERT INTO account (member_id, name, type, provider, currency, current_balance, is_manual, color, \
+             external_account_id, iban, deleted_at) VALUES ($1, 'Row', 'CHECKING', $2, 'EUR', 1, false, \
+             '#123456', $3, $4, {deleted_at})",
+        ))
+        .bind(member_id)
+        .bind(provider)
+        .bind(external_id)
+        .bind(iban)
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+    }
+
+    let response = client
+        .post("/api/bourso/auth/initiate")
+        .json(&json!({ "customerId": "12345678", "password": "246810" }))
+        .send()
+        .await;
+    settle(&app).await;
+
+    assert_eq!(response.status, 200, "{}", response.text());
+    let live: Vec<(Option<String>,)> = picsou::db::query_as(
+        "SELECT external_account_id FROM account WHERE deleted_at IS NULL ORDER BY id",
+    )
+    .fetch_all(&app.state.db)
+    .await
+    .unwrap();
+    assert_eq!(
+        live,
+        vec![
+            (Some("bourso_chk-1".to_owned()),),
+            (Some("eb-account-id".to_owned()),)
+        ]
+    );
+}
+
 /// The rows a member left after deleting one of two copies of the same account (#772): the
 /// sidecar's own, `bourso_chk-1`, and an Enable Banking one holding the IBAN.
 async fn two_copies(sidecar_deleted: bool) -> (TestApp, Client, i64, MockServer) {

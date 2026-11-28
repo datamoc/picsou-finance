@@ -10,7 +10,7 @@
 
 pub mod contract;
 pub mod operations_parser;
-mod passkey;
+pub(crate) mod passkey;
 mod pending;
 pub mod savings_parser;
 

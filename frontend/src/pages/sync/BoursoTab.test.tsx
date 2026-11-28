@@ -56,6 +56,15 @@ describe('BoursoTab', () => {
     apiGet.mockResolvedValue({ data: DISCONNECTED })
   })
 
+  it('offers desktop passkey login using only the customer number', async () => {
+    apiGet.mockImplementation((url: string) => Promise.resolve({ data: url === '/bourso/auth/passkey' ? { available: true } : DISCONNECTED }))
+    apiPost.mockResolvedValue({ data: DISCONNECTED })
+    renderTab()
+    fireEvent.change(await screen.findByLabelText('sync.bourso.customerId'), { target: { value: '12345678' } })
+    fireEvent.click(await screen.findByText('sync.bourso.passkeyConnect'))
+    await vi.waitFor(() => expect(apiPost).toHaveBeenCalledWith('/bourso/auth/passkey', { customerId: '12345678' }, { timeout: 240_000 }))
+  })
+
   /**
    * The app push has nothing to type: the completion call goes out on its own
    * and stays open while the user approves on their phone.

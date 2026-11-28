@@ -11,6 +11,7 @@ use axum::extract::{FromRequestParts, Query, State};
 use axum::http::request::Parts;
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use subtle::ConstantTimeEq;
 
@@ -30,6 +31,9 @@ pub const DESKTOP_GATE_COOKIE: &str = "picsou_desktop_gate";
 
 /// Alternative direct header carrying the per-launch `APP_DESKTOP_TOKEN` for native clients/tests.
 pub const DESKTOP_TOKEN_HEADER: &str = "x-picsou-desktop-token";
+
+/// How long a Hello unlock code issued by `hello_unlock` stays valid.
+const HELLO_CODE_TTL: std::time::Duration = std::time::Duration::from_secs(120);
 
 fn constant_time_str_eq(a: &str, b: &str) -> bool {
     a.len() == b.len() && bool::from(a.as_bytes().ct_eq(b.as_bytes()))
@@ -99,6 +103,40 @@ pub(crate) async fn autologin_admits(state: &AppState, user: &AppUser) -> AppRes
     let primary = users::find_primary_active(&state.db).await?;
     Ok(primary.is_some_and(|primary| primary.id == user.id)
         && !mfa::is_enabled(&state.db, user.id).await?)
+}
+
+/// Guard for shell-only endpoints: `DesktopLoopback` AND the per-launch `APP_DESKTOP_TOKEN`
+/// header. Unlike `DesktopSessionGate`, the gate cookie — which a page script in the WebView
+/// would also send — is never enough: only the shell holding the launch token calls these.
+pub struct DesktopToken;
+
+impl FromRequestParts<AppState> for DesktopToken {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        DesktopLoopback::from_request_parts(parts, state).await?;
+        let Some(expected) = state.config.desktop_token.as_deref() else {
+            return Err(AppError::status(
+                StatusCode::FORBIDDEN,
+                "Desktop session token is not configured.",
+            ));
+        };
+        let ok = parts
+            .headers
+            .get(DESKTOP_TOKEN_HEADER)
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|v| constant_time_str_eq(v, expected));
+        if !ok {
+            return Err(AppError::status(
+                StatusCode::FORBIDDEN,
+                "Desktop session authorization required.",
+            ));
+        }
+        Ok(Self)
+    }
 }
 
 /// Fail-closed extractor for unauthenticated Desktop onboarding & auto-login endpoints.
@@ -394,6 +432,184 @@ pub async fn autologin(
     Ok((jar, user_payload(&user)).into_response())
 }
 
+/// Whether a Hello unlock code is still valid: issued no more than `HELLO_CODE_TTL` ago.
+/// A clock running behind the issuer never extends a code.
+fn hello_code_fresh(issued_at: DateTime<Utc>, now: DateTime<Utc>) -> bool {
+    let age = now.signed_duration_since(issued_at);
+    age >= chrono::Duration::zero()
+        && age <= chrono::Duration::from_std(HELLO_CODE_TTL).unwrap_or_default()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HelloUnlockResponse {
+    code: String,
+}
+
+/// POST /api/auth/desktop-hello-unlock — the shell verified Windows Hello and asks for a
+/// single-use unlock code for the loopback WebView. Shell-only (`DesktopToken`): a page
+/// script holding the gate cookie is refused. Hello substitutes the lock password, never
+/// two-factor: with MFA enabled, or with no lock, there is nothing to unlock this way.
+pub async fn hello_unlock(
+    State(state): State<AppState>,
+    _token: DesktopToken,
+    ip: ClientIp,
+) -> AppResult<axum::Json<impl Serialize>> {
+    let ip_str = ip.as_java_string();
+    if !state
+        .limits
+        .try_consume(&policies::DESKTOP_AUTOLOGIN, &ip_str)
+    {
+        return Err(AppError::status(
+            StatusCode::TOO_MANY_REQUESTS,
+            "Too many requests. Please wait before trying again.",
+        ));
+    }
+    if !settings::desktop_lock_enabled(&state).await? {
+        return Err(AppError::coded(
+            StatusCode::FORBIDDEN,
+            "DESKTOP_LOCK_DISABLED",
+            "Desktop password lock is not enabled; there is nothing to unlock with Windows Hello.",
+        ));
+    }
+    let Some(user) = users::find_primary_active(&state.db).await? else {
+        return Err(AppError::status(
+            StatusCode::NOT_FOUND,
+            "No active local account found.",
+        ));
+    };
+    if mfa::is_enabled(&state.db, user.id).await? {
+        return Err(AppError::coded(
+            StatusCode::FORBIDDEN,
+            "DESKTOP_LOCK_ENABLED",
+            "Two-factor authentication is enabled; sign in with your password.",
+        ));
+    }
+    let raw: [u8; 32] = rand::random();
+    let code = hex::encode(raw);
+    *state
+        .desktop_hello_pending
+        .lock()
+        .unwrap_or_else(|e| e.into_inner()) = Some((code.clone(), state.clock.now()));
+    Ok(axum::Json(HelloUnlockResponse { code }))
+}
+
+/// GET /api/auth/desktop-hello-bootstrap?token=... — consumes the single-use Hello code and
+/// signs the primary account in, answering like `bootstrap`: a redirect to `/` carrying the
+/// session and gate cookies. Re-checks the lock, the account and MFA: any of them may have
+/// changed between the code's issuance and its use.
+pub async fn hello_bootstrap(
+    State(state): State<AppState>,
+    _guard: DesktopLoopback,
+    Query(query): Query<BootstrapQuery>,
+    ip: ClientIp,
+    headers: HeaderMap,
+) -> AppResult<Response> {
+    let ip_str = ip.as_java_string();
+    if !state
+        .limits
+        .try_consume(&policies::DESKTOP_AUTOLOGIN, &ip_str)
+    {
+        return Err(AppError::status(
+            StatusCode::TOO_MANY_REQUESTS,
+            "Too many requests. Please wait before trying again.",
+        ));
+    }
+    let Some(provided) = query.token.as_deref() else {
+        return Err(AppError::status(
+            StatusCode::FORBIDDEN,
+            "Invalid desktop hello code.",
+        ));
+    };
+    // Taken on every read, valid or not: a code works once.
+    let stored = state
+        .desktop_hello_pending
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .take();
+    let Some((expected, issued_at)) = stored else {
+        return Err(AppError::status(
+            StatusCode::FORBIDDEN,
+            "Invalid desktop hello code.",
+        ));
+    };
+    if !constant_time_str_eq(provided, &expected) {
+        return Err(AppError::status(
+            StatusCode::FORBIDDEN,
+            "Invalid desktop hello code.",
+        ));
+    }
+    if !hello_code_fresh(issued_at, state.clock.now()) {
+        return Err(AppError::status(
+            StatusCode::FORBIDDEN,
+            "Desktop hello code has expired; verify Windows Hello again.",
+        ));
+    }
+    if !settings::desktop_lock_enabled(&state).await? {
+        return Err(AppError::coded(
+            StatusCode::FORBIDDEN,
+            "DESKTOP_LOCK_DISABLED",
+            "Desktop password lock is not enabled; there is nothing to unlock with Windows Hello.",
+        ));
+    }
+    let Some(user) = users::find_primary_active(&state.db).await? else {
+        return Err(AppError::status(
+            StatusCode::NOT_FOUND,
+            "No active local account found.",
+        ));
+    };
+    if mfa::is_enabled(&state.db, user.id).await? {
+        return Err(AppError::coded(
+            StatusCode::FORBIDDEN,
+            "DESKTOP_LOCK_ENABLED",
+            "Two-factor authentication is enabled; sign in with your password.",
+        ));
+    }
+    let mut jar = cookie_jar(&state).await;
+    issue_session(
+        &state,
+        &mut jar,
+        &user,
+        false,
+        false,
+        None,
+        RequestInfo {
+            ip: &ip,
+            headers: &headers,
+        },
+    )
+    .await?;
+    audit::record(
+        &state,
+        "desktop.hello.unlocked",
+        Some(&user.username),
+        &setup::audit_ctx(&ip_str, &headers),
+        None,
+    )
+    .await;
+
+    let mut response = StatusCode::SEE_OTHER.into_response();
+    let headers = response.headers_mut();
+    headers.insert(header::LOCATION, HeaderValue::from_static("/"));
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    for set_cookie in jar.headers() {
+        headers.append(
+            header::SET_COOKIE,
+            HeaderValue::from_str(set_cookie)
+                .map_err(|_| AppError::Internal("invalid desktop hello session cookie".into()))?,
+        );
+    }
+    headers.append(
+        header::SET_COOKIE,
+        HeaderValue::from_str(&format!(
+            "{DESKTOP_GATE_COOKIE}={}; HttpOnly; SameSite=Strict; Path=/api",
+            state.desktop_gate_cookie_secret
+        ))
+        .map_err(|_| AppError::Internal("invalid desktop gate cookie".into()))?,
+    );
+    Ok(response)
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DesktopLockResponse {
@@ -559,6 +775,27 @@ pub async fn update_lock(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hello_codes_expire_two_minutes_after_issue() {
+        use chrono::TimeZone;
+
+        let issued = Utc.with_ymd_and_hms(2026, 11, 27, 12, 0, 0).unwrap();
+        assert!(hello_code_fresh(issued, issued));
+        assert!(hello_code_fresh(
+            issued,
+            issued + chrono::Duration::seconds(119)
+        ));
+        assert!(!hello_code_fresh(
+            issued,
+            issued + chrono::Duration::seconds(121)
+        ));
+        // A clock running behind the issuer never extends a code.
+        assert!(!hello_code_fresh(
+            issued,
+            issued - chrono::Duration::seconds(1)
+        ));
+    }
 
     #[test]
     fn derives_clean_usernames_with_local_fallback() {

@@ -1310,6 +1310,7 @@
       "corum": "Suivez vos parts de SCPI et votre assurance-vie CORUM Life.",
       "sofidy": "Suivez vos parts de SCPI Sofidy et leur valeur de retrait.",
       "louve": "Suivez, en lecture seule, vos parts de SCPI achetées via Louve Invest et leur valeur de retrait.",
+      "lucya": "Ajoutez vos contrats d'assurance vie et PER Lucya ; reconnectez-vous pour mettre leur valeur à jour.",
       "property": "Estimez et suivez vos biens immobiliers (maison, appartement ou terrain).",
       "fortuneo": "Synchronisez vos comptes courants, PEA et comptes-titres Fortuneo.",
       "caisseEpargne": "Compte courant, Livret A, LDDS, PEL, LEP, PER, assurance vie, prêts et cartes à la Caisse d'Epargne",
@@ -1757,6 +1758,9 @@
     },
     "bourso": {
       "title": "BoursoBank",
+      "passkeyConnect": "Se connecter avec une passkey ou une clé de sécurité",
+      "passkeyWaiting": "En attente de votre clé de sécurité…",
+      "passkeyFailed": "Connexion par clé impossible ou non confirmée. Vérifiez que votre compte BoursoBank dispose d’une passkey, puis réessayez.",
       "customerId": "Numéro client",
       "password": "Mot de passe",
       "appValidationPrompt": "Ouvrez l'application BoursoBank et validez la connexion.",
@@ -2234,6 +2238,26 @@
         "formatChanged": "Le format du site CORUM a changé. Vos données existantes ont été conservées.",
         "invalidData": "CORUM a renvoyé des données incohérentes. Vos données existantes ont été conservées.",
         "serverError": "Impossible de joindre CORUM. Veuillez réessayer."
+      }
+    },
+    "lucya": {
+      "title": "Lucya",
+      "identifier": "Identifiant",
+      "password": "Mot de passe",
+      "refresh": "Actualiser",
+      "refreshing": "Lecture des contrats…",
+      "scope": "Lit la valeur de vos contrats d'assurance vie et PER Lucya. Rien n'est conservé, ni session ni mot de passe : pour mettre les valeurs à jour, reconnectez-vous ici.",
+      "success_one": "{{count}} contrat mis à jour.",
+      "success_other": "{{count}} contrats mis à jour.",
+      "errors": {
+        "invalidCredentials": "Lucya a refusé l'identifiant ou le mot de passe.",
+        "captchaBlocked": "Lucya demande une vérification anti-robot que Picsou ne passe pas. Réessayez plus tard.",
+        "mfaTypeUnsupported": "Ce compte demande un second facteur que Picsou ne sait pas encore gérer.",
+        "tooManyAttempts": "Trop de tentatives. Patientez avant de réessayer.",
+        "portfolioIncomplete": "Les contrats lus ne correspondent pas au total affiché par Lucya. Vos données existantes ont été conservées.",
+        "formatChanged": "Le format du site Lucya a changé. Vos données existantes ont été conservées.",
+        "invalidData": "Vérifiez l'identifiant et le mot de passe saisis.",
+        "serverError": "Lucya est momentanément indisponible. Veuillez réessayer."
       }
     },
     "sofidy": {
@@ -3874,6 +3898,10 @@
     "autologinFailed": {
       "title": "Ouverture de session impossible",
       "description": "Picsou n'a pas pu ouvrir votre session automatiquement. Quittez Picsou depuis son icône (barre des menus ou zone de notification), puis relancez-le."
+    },
+    "hello": {
+      "button": "Continuer avec Windows Hello",
+      "error": "Le déverrouillage avec Windows Hello a échoué. Réessayez ou connectez-vous avec votre mot de passe."
     },
     "update": {
       "bannerTitle": "Picsou {{version}} est disponible",

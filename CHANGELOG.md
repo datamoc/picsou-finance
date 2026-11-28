@@ -13,11 +13,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (supports, euro funds, units, average buy-in, P&L, and EUR valuation) natively on Picsou Desktop
   via an embedded OS WebView login (`WebView2` / `WKWebView` / `WebKitGTK`) and pure-Rust XLSX
   export parser (zero Docker, zero Python).
+- **BoursoBank:** sign in with an existing passkey or security key in Picsou Desktop on Windows or Linux.
+- **Lucya life insurance and PER contracts.** On the Sync page or in Add account, sign in to Lucya
+  to create or update one account per contract with its current value. Nothing is stored, neither a
+  session nor your password: signing in again is how you refresh.
 - **Natixis Interépargne: sign in with a passkey (Picsou Desktop for Windows and Linux).** Type
   your e-mail, then confirm with Windows Hello or your security key on Windows, or with a USB
   security key and its PIN on Linux: no password and no code. Picsou uses a passkey you already
   have, never creates one, and keeps the same session as a password login. Docker and Helm
   installs keep the password login.
+- **Install secrets in the OS credential store on Desktop.** `JWT_SECRET` and `CRYPTO_ENCRYPTION_KEY`
+  now live in Credential Manager on Windows (DPAPI user scope, TPM-backed where a TPM exists) and in
+  the Secret Service provider (GNOME Keyring, KWallet) or kernel keyring on Linux, instead of
+  plaintext files next to the database. The desktop shell starts in `PICSOU_OS_KEYSTORE=auto`:
+  existing secrets files migrate into the vault on first boot (verified, then deleted) and stay
+  as a fallback when no vault answers; `PICSOU_OS_KEYSTORE=require` (opt-in via the user's
+  environment) refuses to start without the store and never writes plaintext. Docker and Helm
+  installs are unchanged. Server operators can set either mode explicitly.
+- **Windows Hello unlock for the desktop password lock.** Inside Picsou Desktop on Windows,
+  the login page offers unlocking with Windows Hello when Hello is available: the system
+  prompt verifies the person, then the shell redeems a single-use, two-minute code for a
+  normal session — the same cookies and the same `desktop.hello.unlocked` audit event as a
+  password login. The password stays as an alternative, Hello never bypasses two-factor,
+  and page scripts cannot mint codes (issuance requires the shell's launch token, not
+  the gate cookie). Linux keeps the password for now.
 - **Explainable and actionable unclassified diversification amounts.** In Analysis → Diversification,
   the overall "unclassified" badge and each dimension's (Sectors, Regions) unclassified badge are
   now buttons that open a breakdown dialog listing every contributing position (including funds
@@ -57,6 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **BoursoBank: reconnecting shows deleted accounts again.** Signing in again restores the
+  BoursoBank accounts you had deleted; a routine sync still leaves them deleted.
 - **Natixis Interépargne: reconnecting shows deleted accounts again.** After a Natixis account
   was deleted, a new sign-in reported a successful sync but showed nothing for it. Signing in
   again now restores the deleted plans; a routine sync still leaves them deleted.

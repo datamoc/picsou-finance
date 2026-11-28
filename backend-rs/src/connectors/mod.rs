@@ -16,6 +16,7 @@ pub mod degiro;
 pub mod fortuneo;
 pub mod lbp;
 pub mod linxea;
+pub mod lucya;
 pub mod natixis;
 pub mod revolut;
 pub mod seams;
@@ -51,6 +52,7 @@ pub fn register(routes: &mut Routes) {
     fortuneo::register(routes);
     lbp::register(routes);
     linxea::register(routes);
+    lucya::register(routes);
     natixis::register(routes);
     revolut::register(routes);
     sofidy::register(routes);

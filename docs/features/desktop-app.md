@@ -155,9 +155,10 @@ no external database process, and no bundled PostgreSQL server.
   that arrives after the disconnect answers `AUTH_ATTEMPT_EXPIRED` and starts no sync. A WebView
   `processId` is refused by `POST /api/bnp/auth/complete` and stays usable by its own window.
 - **Passkey prompt** (`passkey/`, Windows and Linux): the same bridge answers
-  `POST /passkey/assertion` for the Natixis passkey login, behind the same key, checked
+  `POST /passkey/assertion` for Natixis and BoursoBank passkey logins, behind the same key, checked
   before the body is parsed. The shell builds the signed
-  client data for an allow-listed relying party. One prompt is open at a time. The
+  client data for an allow-listed relying party and its fixed origin (BoursoBank uses
+  `boursobank.com` with `https://clients.boursobank.com`). One prompt is open at a time. The
   backend learns the route from `NATIXIS_PASSKEY_URL`, which only the shell may set
   ([ADR](../decisions/2026-11-25-natixis-passkey-on-desktop.md)).
   - *Windows*: the shell shows the main window and lets Windows ask for a fingerprint, a

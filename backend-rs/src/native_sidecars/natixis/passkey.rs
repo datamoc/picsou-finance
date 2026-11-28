@@ -124,7 +124,7 @@ impl NatixisConfig {
 /// Natixis' answer to `GET /auth/v1/webauthn/authentication/options`, forwarded to the shell.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Options {
+pub(crate) struct Options {
     rp_id: String,
     challenge: String,
     /// Left out, like `transports`, when Natixis sends none or `null`.
@@ -148,12 +148,12 @@ struct AllowedCredential {
 /// The shell's assertion, binary fields as unpadded base64url.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Assertion {
-    credential_id: String,
-    authenticator_data: String,
-    client_data_json: String,
-    signature: String,
-    user_handle: Option<String>,
+pub(crate) struct Assertion {
+    pub(crate) credential_id: String,
+    pub(crate) authenticator_data: String,
+    pub(crate) client_data_json: String,
+    pub(crate) signature: String,
+    pub(crate) user_handle: Option<String>,
 }
 
 impl NativeNatixis {
@@ -350,7 +350,7 @@ impl NativeNatixis {
     }
 }
 
-async fn ask_the_shell(
+pub(crate) async fn ask_the_shell(
     bridge: &PasskeyBridge,
     options: &Options,
 ) -> Result<Assertion, NatixisError> {
