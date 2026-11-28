@@ -5,6 +5,7 @@ import {
   banquePopulaireApi,
   boursoApi,
   bourseDirectApi,
+  linxeaApi,
   caisseEpargneApi,
   cicApi,
   cmesApi,
@@ -176,6 +177,12 @@ export const sidecarProviders = {
     queryKey: syncKeys.bourseDirect(),
     refreshOnSuccess: PORTFOLIO_VIEWS,
     ...loginFlow(bourseDirectApi),
+  },
+
+  linxea: {
+    queryKey: syncKeys.linxea(),
+    refreshOnSuccess: PORTFOLIO_VIEWS,
+    ...loginFlow(linxeaApi),
   },
 
   amundi: {

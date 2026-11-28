@@ -109,7 +109,7 @@ type SyncConnection = {
   running?: boolean
   id: string
   providerType: 'bank' | 'exchange' | 'wallet' | 'tr' | 'finary' | 'bourso' | 'revolut'
-    | 'amundi' | 'fortuneo' | 'bourse-direct' | 'degiro' | 'ibkr' | 'simplefin' | 'wise'
+    | 'amundi' | 'fortuneo' | 'bourse-direct' | 'linxea' | 'degiro' | 'ibkr' | 'simplefin' | 'wise'
     | 'amex' | 'corum' | 'sofidy' | 'louve' | 'caisse-epargne' | 'banque-populaire' | 'lbp' | 'bnp' | 'cmes' | 'natixis' | 'cic'
   name: string
   status: string
@@ -133,6 +133,7 @@ const ProviderIcon: Record<SyncConnection['providerType'], React.ComponentType<{
   amundi: PiggyBank,
   fortuneo: PiggyBank,
   'bourse-direct': ChartLineUp,
+  linxea: PiggyBank,
   degiro: ChartLineUp,
   ibkr: ChartLineUp,
   simplefin: Bank,
@@ -156,6 +157,7 @@ const REAUTH_TAB: Partial<Record<SyncConnection['providerType'], string>> = {
   fortuneo: 'fortuneo',
   bourso: 'bourso',
   'bourse-direct': 'bourse-direct',
+  linxea: 'linxea',
   degiro: 'degiro',
   ibkr: 'ibkr',
   simplefin: 'simplefin',
@@ -249,6 +251,7 @@ export function SyncAllModal({ open, onOpenChange }: SyncAllModalProps) {
   const { data: amundiStatus } = useProviderStatus("amundi")
   const { data: fortuneoStatus } = useProviderStatus("fortuneo")
   const { data: bourseDirectStatus } = useProviderStatus("bourseDirect")
+  const { data: linxeaStatus } = useProviderStatus("linxea")
   const { data: degiroStatus } = useDegiroSessionStatus()
   const { data: ibkrStatus } = useIbkrStatus()
   const { data: simplefinStatus } = useSimplefinStatus()
@@ -345,6 +348,13 @@ export function SyncAllModal({ open, onOpenChange }: SyncAllModalProps) {
       running: isJobRunning(bourseDirectStatus?.syncStatus),
     },
     {
+      type: 'linxea' as const, name: 'Linxea', provider: 'Linxea',
+      active: linxeaStatus?.isActive ?? false, lastSyncedAt: linxeaStatus?.lastSyncCompletedAt ?? null,
+      hasSession: linxeaStatus != null && linxeaStatus.syncStatus !== 'IDLE',
+      failed: linxeaStatus?.syncStatus === 'FAILED',
+      running: isJobRunning(linxeaStatus?.syncStatus),
+    },
+    {
       type: 'degiro' as const, name: 'DEGIRO', provider: 'DEGIRO',
       active: degiroStatus?.isActive ?? false, lastSyncedAt: degiroStatus?.lastSyncedAt ?? null,
       failed: degiroStatus?.status === 'FAILED',
@@ -422,7 +432,7 @@ export function SyncAllModal({ open, onOpenChange }: SyncAllModalProps) {
       running: isJobRunning(cicStatus?.syncStatus),
       canReconnect: cicStatus?.canReconnect === true,
     },
-  ], [cicStatus, cmesStatus, natixisStatus, amexStatus, corumStatus, sofidyStatus, louveStatus, amundiStatus, fortuneoStatus, boursoStatus, caisseEpargneStatus, banquePopulaireStatus, lbpStatus, bnpStatus, bourseDirectStatus, degiroStatus, ibkrStatus, simplefinStatus, wiseStatus])
+  ], [cicStatus, cmesStatus, natixisStatus, amexStatus, corumStatus, sofidyStatus, louveStatus, amundiStatus, fortuneoStatus, boursoStatus, caisseEpargneStatus, banquePopulaireStatus, lbpStatus, bnpStatus, bourseDirectStatus, linxeaStatus, degiroStatus, ibkrStatus, simplefinStatus, wiseStatus])
 
   const retryBankMutation     = useRetryBankSync()
   const reconnectBankMutation = useReconnectBankSync()
@@ -440,6 +450,7 @@ export function SyncAllModal({ open, onOpenChange }: SyncAllModalProps) {
   const syncAmundiMutation       = useProviderSync("amundi")
   const syncFortuneoMutation     = useProviderSync("fortuneo")
   const syncBourseDirectMutation = useProviderSync("bourseDirect")
+  const syncLinxeaMutation       = useProviderSync("linxea")
   const syncDegiroMutation       = useSyncDegiro()
   const syncIbkrMutation         = useSyncIbkr()
   const syncSimplefinMutation    = useSyncSimplefin()
@@ -679,6 +690,9 @@ export function SyncAllModal({ open, onOpenChange }: SyncAllModalProps) {
         break
       case 'bourse-direct':
         syncBourseDirectMutation.mutate(undefined, rowCallbacks(formatGeneric))
+        break
+      case 'linxea':
+        syncLinxeaMutation.mutate(undefined, rowCallbacks(formatGeneric))
         break
       case 'degiro':
         syncDegiroMutation.mutate(undefined, rowCallbacks(formatGeneric))

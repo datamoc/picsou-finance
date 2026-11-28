@@ -15,6 +15,7 @@ pub mod corum;
 pub mod degiro;
 pub mod fortuneo;
 pub mod lbp;
+pub mod linxea;
 pub mod lucya;
 pub mod natixis;
 pub mod revolut;
@@ -50,6 +51,7 @@ pub fn register(routes: &mut Routes) {
     degiro::register(routes);
     fortuneo::register(routes);
     lbp::register(routes);
+    linxea::register(routes);
     lucya::register(routes);
     natixis::register(routes);
     revolut::register(routes);
@@ -162,6 +164,9 @@ pub async fn recover_interrupted_syncs(state: &AppState) -> anyhow::Result<()> {
     lbp::recover_interrupted_syncs(state)
         .await
         .map_err(|e| recovery_failed("lbp", e))?;
+    linxea::recover_interrupted_syncs(state)
+        .await
+        .map_err(|e| recovery_failed("linxea", e))?;
     natixis::recover_interrupted_syncs(state)
         .await
         .map_err(|e| recovery_failed("natixis", e))?;

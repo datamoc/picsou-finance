@@ -11,6 +11,7 @@ import {
   BitcoinLogo,
   BnpParibasLogo,
   BourseDirectLogo,
+  LinxeaLogo,
   BoursoBankLogo,
   CaisseEpargneLogo,
   CorumLogo,
@@ -40,6 +41,7 @@ import {
 import { AccountForm } from '@/components/shared/AccountForm'
 import { AddPropertyModal } from '@/components/property/AddPropertyModal'
 import { BourseDirectPanel } from '@/components/sync/BourseDirectPanel'
+import { LinxeaPanel } from '@/components/sync/LinxeaPanel'
 import { BoursoPanel } from '@/components/sync/BoursoPanel'
 import { CaisseEpargnePanel } from '@/components/sync/CaisseEpargnePanel'
 import { BanquePopulairePanel } from '@/components/sync/BanquePopulairePanel'
@@ -86,7 +88,7 @@ interface AddAccountModalProps {
 
 type WizardStep =
   | 'selector' | 'banks' | 'exchanges' | 'wallets' | 'tr' | 'revolut' | 'bourso' | 'caisseEpargne' | 'banquePopulaire'
-  | 'lbp' | 'bnp' | 'bourseDirect' | 'degiro' | 'ibkr' | 'simplefin' | 'wise' | 'amundi' | 'natixis' | 'fortuneo' | 'amex' | 'corum' | 'sofidy' | 'louve' | 'lucya'
+  | 'lbp' | 'bnp' | 'bourseDirect' | 'linxea' | 'degiro' | 'ibkr' | 'simplefin' | 'wise' | 'amundi' | 'natixis' | 'fortuneo' | 'amex' | 'corum' | 'sofidy' | 'louve' | 'lucya'
   | 'finary' | 'property' | 'manual'
 
 // ---------------------------------------------------------------------------
@@ -117,6 +119,7 @@ const SOURCES: Array<{
   { key: 'simplefin', category: 'banks', icon: SimplefinLogo, labelKey: 'sync.simplefin.title', descKey: 'addAccount.desc.simplefin' },
   { key: 'tr', category: 'investing', icon: TradeRepublicLogo, labelKey: 'sync.tr.title', descKey: 'addAccount.desc.tr' },
   { key: 'bourseDirect', category: 'investing', icon: BourseDirectLogo, labelKey: 'sync.bourseDirect.title', descKey: 'addAccount.desc.bourseDirect' },
+  { key: 'linxea', category: 'investing', icon: LinxeaLogo, labelKey: 'sync.linxea.title', descKey: 'addAccount.desc.linxea' },
   { key: 'degiro', category: 'investing', icon: DegiroLogo, labelKey: 'sync.degiro.title', descKey: 'addAccount.desc.degiro' },
   { key: 'ibkr', category: 'investing', icon: IbkrLogo, labelKey: 'sync.ibkr.title', descKey: 'addAccount.desc.ibkr' },
   { key: 'amundi', category: 'investing', icon: AmundiLogo, labelKey: 'sync.amundi.title', descKey: 'addAccount.desc.amundi' },
@@ -144,6 +147,7 @@ const PANEL_STEPS: Partial<Record<WizardStep, ComponentType<{ onConnected?: () =
   lbp: LbpPanel,
   bnp: BnpPanel,
   bourseDirect: BourseDirectPanel,
+  linxea: LinxeaPanel,
   degiro: DegiroPanel,
   ibkr: IbkrPanel,
   simplefin: SimplefinPanel,

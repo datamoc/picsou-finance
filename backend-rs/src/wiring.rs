@@ -555,6 +555,7 @@ impl ConnectionRemoval for SyncConnectionRemoval {
             K::BourseDirect => {
                 delete_sidecar(&mut *conn, SidecarBank::BourseDirect, member_id).await?
             }
+            K::Linxea => delete_sidecar(&mut *conn, SidecarBank::Linxea, member_id).await?,
             K::Bourso => delete_sidecar(&mut *conn, SidecarBank::Bourso, member_id).await?,
             K::Fortuneo => delete_sidecar(&mut *conn, SidecarBank::Fortuneo, member_id).await?,
             K::Corum => delete_sidecar(&mut *conn, SidecarBank::Corum, member_id).await?,
@@ -1291,6 +1292,7 @@ impl SidecarSources for ConnectorSidecars {
             }
             "bourso" => connectors::bourso::resync_reporting(state, member_id).await,
             "bourse-direct" => connectors::bourse_direct::resync_reporting(state, member_id).await,
+            "linxea" => connectors::linxea::resync_reporting(state, member_id).await,
             "amundi" => connectors::amundi::resync_reporting(state, member_id).await,
             "fortuneo" => connectors::fortuneo::resync_reporting(state, member_id).await,
             "amex" => connectors::amex::resync_reporting(state, member_id).await,

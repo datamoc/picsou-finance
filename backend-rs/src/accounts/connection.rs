@@ -56,13 +56,14 @@ async fn scpi_links(db: impl DbExec<'_>, member_id: i64) -> sqlx::Result<ScpiLin
 }
 
 /// The external-id prefixes of the syncs that own one connection per member.
-const SINGLETON_PREFIXES: [(&str, ConnectionKind); 13] = [
+const SINGLETON_PREFIXES: [(&str, ConnectionKind); 14] = [
     ("amundi_", ConnectionKind::Amundi),
     ("cmes_", ConnectionKind::Cmes),
     ("cic_", ConnectionKind::Cic),
     ("natixis_", ConnectionKind::Natixis),
     ("tr_", ConnectionKind::TradeRepublic),
     ("bd_", ConnectionKind::BourseDirect),
+    ("linxea_", ConnectionKind::Linxea),
     ("bourso_", ConnectionKind::Bourso),
     ("ft_", ConnectionKind::Fortuneo),
     ("ibkr_", ConnectionKind::Ibkr),
@@ -169,6 +170,7 @@ async fn label(
         K::Natixis => "Natixis Interépargne".to_owned(),
         K::TradeRepublic => "Trade Republic".to_owned(),
         K::BourseDirect => "Bourse Direct".to_owned(),
+        K::Linxea => "Linxea".to_owned(),
         K::Bourso => "BoursoBank".to_owned(),
         K::Fortuneo => "Fortuneo".to_owned(),
         K::Degiro => "DEGIRO".to_owned(),

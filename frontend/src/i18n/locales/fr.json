@@ -1297,6 +1297,7 @@
       "revolut": "Synchronisez vos comptes Revolut par téléphone avec validation sur votre mobile.",
       "bourso": "Synchronisez vos comptes courants, livrets, PEA et comptes-titres BoursoBank.",
       "bourseDirect": "Synchronisez vos portefeuilles PEA et compte-titres Bourse Direct.",
+      "linxea": "Synchronisez vos contrats PER, assurance vie et PEA Linxea.",
       "degiro": "Synchronisez votre compte-titres et vos positions DEGIRO.",
       "ibkr": "Synchronisez votre compte Interactive Brokers via Flex Query.",
       "simplefin": "Importez vos comptes bancaires à l'aide d'un jeton SimpleFIN.",
@@ -2009,6 +2010,44 @@
         "formatChanged": "Le format du portefeuille Bourse Direct a changé. Vos données existantes ont été conservées.",
         "invalidData": "Bourse Direct a renvoyé des données incohérentes. Vos données existantes ont été conservées.",
         "serverError": "Impossible de joindre Bourse Direct. Veuillez réessayer."
+      }
+    },
+    "linxea": {
+      "title": "Linxea",
+      "login": "E-mail / identifiant",
+      "password": "Mot de passe",
+      "otpCode": "Code à 6 chiffres reçu par e-mail",
+      "otpPrompt": "Saisissez le code à 6 chiffres que Linxea vient d’envoyer à votre adresse e-mail.",
+      "connect": "Se connecter",
+      "connecting": "Connexion en cours…",
+      "validate": "Valider le code",
+      "validating": "Validation en cours…",
+      "sync": "Synchroniser",
+      "queued": "Synchronisation en attente…",
+      "syncing": "Synchronisation en cours…",
+      "syncSuccess": "Contrats synchronisés.",
+      "clearSession": "Déconnecter",
+      "noSession": "Aucune session active",
+      "sessionActive": "Session active",
+      "scope": "Synchronise vos contrats PER, assurance vie et PEA Linxea : supports, parts, prix de revient et valorisation.",
+      "errors": {
+        "tooManyAttempts": "Trop de tentatives. Veuillez patienter.",
+        "invalidCredentials": "E-mail ou mot de passe Linxea invalide.",
+        "invalidCode": "Code invalide ou expiré. Recommencez la connexion.",
+        "authAttemptExpired": "La tentative d’authentification a expiré. Recommencez la connexion.",
+        "sessionExpired": "La session Linxea a expiré. Veuillez vous reconnecter.",
+        "portfolioIncomplete": "Linxea a renvoyé un contrat incomplet. Vos données existantes ont été conservées.",
+        "formatChanged": "Le format de l’export Linxea a changé. Vos données existantes ont été conservées.",
+        "invalidData": "Linxea a renvoyé des données incohérentes. Vos données existantes ont été conservées.",
+        "serverError": "Impossible de joindre Linxea. Veuillez réessayer."
+      },
+      "webview": {
+        "hint": "Connectez-vous directement sur l’espace client officiel Linxea dans une fenêtre dédiée. Picsou ne voit jamais vos identifiants.",
+        "connect": "Se connecter à Linxea",
+        "reconnect": "Reconnecter Linxea",
+        "waiting": "Connectez-vous dans la fenêtre Linxea qui vient de s’ouvrir…",
+        "waitingHint": "Saisissez votre e-mail, votre mot de passe si demandé, puis le code reçu par e-mail directement sur le site de Linxea. La fenêtre se ferme automatiquement une fois connecté.",
+        "fetching": "Connecté — récupération de vos contrats Linxea…"
       }
     },
     "amundi": {

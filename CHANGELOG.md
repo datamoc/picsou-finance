@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Linxea connector.** Synchronize Linxea PER, life-insurance (*assurance vie*), and PEA contracts
+  (supports, euro funds, units, average buy-in, P&L, and EUR valuation) natively on Picsou Desktop
+  via an embedded OS WebView login (`WebView2` / `WKWebView` / `WebKitGTK`) and pure-Rust XLSX
+  export parser (zero Docker, zero Python).
 - **BoursoBank:** sign in with an existing passkey or security key in Picsou Desktop on Windows or Linux.
 - **Lucya life insurance and PER contracts.** On the Sync page or in Add account, sign in to Lucya
   to create or update one account per contract with its current value. Nothing is stored, neither a
@@ -34,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   password login. The password stays as an alternative, Hello never bypasses two-factor,
   and page scripts cannot mint codes (issuance requires the shell's launch token, not
   the gate cookie). Linux keeps the password for now.
-
 - **Explainable and actionable unclassified diversification amounts.** In Analysis → Diversification,
   the overall "unclassified" badge and each dimension's (Sectors, Regions) unclassified badge are
   now buttons that open a breakdown dialog listing every contributing position (including funds

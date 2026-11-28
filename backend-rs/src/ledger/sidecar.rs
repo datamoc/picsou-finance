@@ -205,6 +205,9 @@ pub enum SidecarBank {
     /// The sign-in is approved in the bank's mobile app: there is no `INVALID_OTP`, because no code
     /// is submitted. Certicode is no longer the flow for a modern account.
     Lbp,
+    /// Linxea's client space sends a six-digit code by e-mail on every new browser; the contract
+    /// exports are read through the same authenticated session.
+    Linxea,
     /// The second factor is a mobile confirmation or an SMS code, depending on how the saver's
     /// access is set up.
     Cic,
@@ -235,6 +238,7 @@ impl SidecarBank {
         SidecarBank::Bourso,
         SidecarBank::CaisseEpargne,
         SidecarBank::Lbp,
+        SidecarBank::Linxea,
         SidecarBank::Cic,
         SidecarBank::Cmes,
         SidecarBank::Corum,
@@ -255,6 +259,7 @@ impl SidecarBank {
             SidecarBank::Bourso => "BOURSO",
             SidecarBank::CaisseEpargne => "CAISSE_EPARGNE",
             SidecarBank::Lbp => "LBP",
+            SidecarBank::Linxea => "LINXEA",
             SidecarBank::Cic => "CIC",
             SidecarBank::Cmes => "CMES",
             SidecarBank::Corum => "CORUM",
@@ -276,6 +281,7 @@ impl SidecarBank {
             SidecarBank::Bourso => "BoursoBank",
             SidecarBank::CaisseEpargne => "Caisse d'Epargne",
             SidecarBank::Lbp => "La Banque Postale",
+            SidecarBank::Linxea => "Linxea",
             SidecarBank::Cic => "CIC",
             SidecarBank::Cmes => "Crédit Mutuel Épargne Salariale",
             SidecarBank::Corum => "CORUM",
@@ -297,6 +303,7 @@ impl SidecarBank {
             SidecarBank::Bourso => "bourso-auth",
             SidecarBank::CaisseEpargne => "caisse-epargne-auth",
             SidecarBank::Lbp => "lbp-auth",
+            SidecarBank::Linxea => "linxea-auth",
             SidecarBank::Cic => "cic-auth",
             SidecarBank::Cmes => "cmes-auth",
             SidecarBank::Corum => "corum-auth",
@@ -638,6 +645,26 @@ impl SidecarBank {
                     "La Banque Postale is temporarily unavailable",
                 ),
             ],
+            SidecarBank::Linxea => &[
+                (
+                    InvalidCredentials,
+                    "Linxea rejected the e-mail or password",
+                ),
+                (InvalidOtp, "Linxea rejected the verification code"),
+                (
+                    AuthAttemptExpired,
+                    "The Linxea authentication attempt expired",
+                ),
+                (SessionExpired, "The Linxea session expired"),
+                (
+                    PortfolioIncomplete,
+                    "Linxea returned an incomplete contract",
+                ),
+                (UpstreamFormatChanged, "The Linxea website format changed"),
+                (InvalidData, "Linxea returned invalid contract data"),
+                (UpstreamUnavailable, "Linxea is temporarily unavailable"),
+                (InternalError, "Linxea is temporarily unavailable"),
+            ],
             SidecarBank::Cic => &[
                 (
                     InvalidCredentials,
@@ -962,7 +989,7 @@ impl SourceSyncResult {
                 matches!(code, Some("SESSION_EXPIRED" | "INVALID_CREDENTIALS"))
             }
             "louve" => matches!(code, Some("SESSION_EXPIRED" | "INVALID_SESSION_STATE")),
-            "bourse-direct" | "amundi" | "fortuneo" | "amex" | "simplefin" | "wise" => {
+            "bourse-direct" | "linxea" | "amundi" | "fortuneo" | "amex" | "simplefin" | "wise" => {
                 code == Some("SESSION_EXPIRED")
             }
             _ => false,

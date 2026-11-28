@@ -238,6 +238,15 @@ export function NatixisLogo({ className }: LogoProps) {
   )
 }
 
+/** Linxea — monochrome L mark in a rounded square. */
+export function LinxeaLogo({ className }: LogoProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2.6 3.4v11.2h9.1v-2.7h-6.2V6.4H7.6Z" />
+    </svg>
+  )
+}
+
 /** Sofidy — geometric monochrome S emblem. */
 export function SofidyLogo({ className }: LogoProps) {
   return (

@@ -321,6 +321,7 @@ pub fn start(
             .map_err(|e| format!("webview bank bridge: {e}"))?;
         let bridge_url = bridge.url().to_owned();
         let amex_url = bridge.amex_url();
+        let linxea_url = bridge.linxea_url();
         let revolut_url = bridge.revolut_url();
         let passkey_url = bridge.passkey_url();
         {
@@ -334,6 +335,7 @@ pub fn start(
         }
         env.push(("BNP_AUTH_URL".to_owned(), bridge_url));
         env.push(("AMEX_AUTH_URL".to_owned(), amex_url));
+        env.push(("LINXEA_AUTH_URL".to_owned(), linxea_url));
         env.push(("REVOLUT_AUTH_URL".to_owned(), revolut_url));
         if cfg!(any(windows, target_os = "linux")) {
             env.push((PASSKEY_URL_VARIABLE.to_owned(), passkey_url));

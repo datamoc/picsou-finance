@@ -141,16 +141,16 @@ async fn resync_scheduled_runs_canonical_order_and_skips_degiro() {
 
     let sources: Vec<&str> = results.iter().map(|r| r.source.as_str()).collect();
     assert_eq!(sources, CANONICAL_ORDER);
-    assert_eq!(results.len(), 23);
+    assert_eq!(results.len(), 24);
 
     // Revolut precedes Enable Banking; Louve is last; DEGIRO is skipped without calling its hook.
     assert_eq!(results[0].source, "revolut");
     assert_eq!(results[1].source, "enable-banking");
     assert_eq!(results[2].source, "enable-banking-retry");
-    assert_eq!(results[15].source, "degiro");
-    assert_eq!(results[15].status, SyncStatus::Skipped);
-    assert_eq!(results[15].message, "Unattended DEGIRO sync is disabled");
-    assert_eq!(results[22].source, "louve");
+    assert_eq!(results[16].source, "degiro");
+    assert_eq!(results[16].status, SyncStatus::Skipped);
+    assert_eq!(results[16].message, "Unattended DEGIRO sync is disabled");
+    assert_eq!(results[23].source, "louve");
 
     assert!(
         !sidecars.calls().contains(&"degiro"),
@@ -163,6 +163,7 @@ async fn resync_scheduled_runs_canonical_order_and_skips_degiro() {
             "trade-republic",
             "bourso",
             "bourse-direct",
+            "linxea",
             "amundi",
             "fortuneo",
             "amex",
@@ -223,7 +224,7 @@ async fn resync_for_user_includes_degiro_and_filters_in_canonical_order() {
     let mid = member_id(&app).await;
 
     let full = member_sync::resync_for_user(&app.state, mid, None).await;
-    assert_eq!(full.len(), 23);
+    assert_eq!(full.len(), 24);
     let degiro = full.iter().find(|r| r.source == "degiro").unwrap();
     assert_eq!(degiro.status, SyncStatus::Synced);
     assert!(sidecars.calls().contains(&"degiro"));
