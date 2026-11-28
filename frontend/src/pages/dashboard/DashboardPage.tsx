@@ -324,8 +324,8 @@ export function DashboardPage() {
       </Card>
 
       {/* Charts row */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="h-[420px]">
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-12">
+        <Card className="h-[420px] 2xl:col-span-7">
           <CardHeader>
             {/* Titled by wealth mode — the curve plots (net/gross/financial) wealth,
                 not gain/loss (issue #18). */}
@@ -336,86 +336,94 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <DistributionPie data={displayDistribution} />
+        <DistributionPie data={displayDistribution} className="2xl:col-span-5" />
       </div>
 
       {/* Property wealth: gross, mortgage debt and the equity between them. Renders nothing
           when the member owns no property. */}
       <RealEstateSummaryCard />
 
-      {/* Goals section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('dashboard.goals')}</CardTitle>
-          {data.goalSummaries.length > 0 && (
-            <CardAction>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/goals">
-                  <Plus />
-                  {t('dashboard.newGoal')}
-                </Link>
-              </Button>
-            </CardAction>
-          )}
-        </CardHeader>
-        <CardContent>
-          {data.goalSummaries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('dashboard.noGoals')}</p>
-          ) : (
-            <ItemGroup className="gap-3">
-              {/* Savings targets only — the backend already filters recurring plans out of
-                  goalSummaries, and this card is built entirely around a completion percentage. */}
-              {data.goalSummaries
-                .filter((g) => g.percentComplete != null && g.targetAmount != null)
-                .sort((a, b) => (b.percentComplete ?? 0) - (a.percentComplete ?? 0))
-                .slice(0, 3)
-                .map((goal) => (
-                <Item
-                  key={goal.id}
-                  variant="muted"
-                  className="flex-col items-stretch rounded-xl px-4 py-3 gap-4 cursor-pointer"
-                  onClick={() => setDetailGoalId(goal.id)}
-                >
-                  <ItemContent className="gap-3">
-                    <ItemDescription className="cn-font-heading text-sm font-semibold text-foreground">
-                      {goal.name}
-                    </ItemDescription>
-                    <CurrencyDisplay
-                      value={goal.currentTotal}
-                      className="text-3xl font-semibold tabular-nums"
-                    />
-                    <Progress value={goal.percentComplete ?? 0} className="[&_[data-slot=progress-indicator]]:bg-emerald-500" />
-                  </ItemContent>
-                  <ItemFooter>
-                    <span className="text-sm text-muted-foreground">
-                      {formatPercent(goal.percentComplete ?? 0, { fractionDigits: 0 })} {t('dashboard.achieved')}
-                    </span>
-                    <CurrencyDisplay
-                      value={goal.targetAmount ?? 0}
-                      className="text-sm font-medium tabular-nums"
-                    />
-                  </ItemFooter>
-                </Item>
-              ))}
-              {data.goalSummaries.length > 3 && (
-                <Button variant="ghost" size="sm" className="w-full" asChild>
+      {/* Goals & Liabilities: sit side-by-side on wide screens to use horizontal space */}
+      <div className={cn('grid items-start gap-6', data.liabilities.length > 0 && 'xl:grid-cols-2')}>
+        {/* Goals section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('dashboard.goals')}</CardTitle>
+            {data.goalSummaries.length > 0 && (
+              <CardAction>
+                <Button variant="outline" size="sm" asChild>
                   <Link to="/goals">
-                    {t('dashboard.otherGoals', { count: data.goalSummaries.length - 3 })}
+                    <Plus />
+                    {t('dashboard.newGoal')}
                   </Link>
                 </Button>
-              )}
-            </ItemGroup>
-          )}
-        </CardContent>
-      </Card>
+              </CardAction>
+            )}
+          </CardHeader>
+          <CardContent>
+            {data.goalSummaries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('dashboard.noGoals')}</p>
+            ) : (
+              <ItemGroup
+                className={cn(
+                  'grid grid-cols-1 gap-3 sm:grid-cols-2',
+                  data.liabilities.length > 0 ? 'xl:grid-cols-1 2xl:grid-cols-2' : 'xl:grid-cols-3',
+                )}
+              >
+                {/* Savings targets only — the backend already filters recurring plans out of
+                    goalSummaries, and this card is built entirely around a completion percentage. */}
+                {data.goalSummaries
+                  .filter((g) => g.percentComplete != null && g.targetAmount != null)
+                  .sort((a, b) => (b.percentComplete ?? 0) - (a.percentComplete ?? 0))
+                  .slice(0, 3)
+                  .map((goal) => (
+                  <Item
+                    key={goal.id}
+                    variant="muted"
+                    className="flex-col items-stretch rounded-xl px-4 py-3 gap-4 cursor-pointer"
+                    onClick={() => setDetailGoalId(goal.id)}
+                  >
+                    <ItemContent className="gap-3">
+                      <ItemDescription className="cn-font-heading text-sm font-semibold text-foreground">
+                        {goal.name}
+                      </ItemDescription>
+                      <CurrencyDisplay
+                        value={goal.currentTotal}
+                        className="text-3xl font-semibold tabular-nums"
+                      />
+                      <Progress value={goal.percentComplete ?? 0} className="[&_[data-slot=progress-indicator]]:bg-emerald-500" />
+                    </ItemContent>
+                    <ItemFooter>
+                      <span className="text-sm text-muted-foreground">
+                        {formatPercent(goal.percentComplete ?? 0, { fractionDigits: 0 })} {t('dashboard.achieved')}
+                      </span>
+                      <CurrencyDisplay
+                        value={goal.targetAmount ?? 0}
+                        className="text-sm font-medium tabular-nums"
+                      />
+                    </ItemFooter>
+                  </Item>
+                ))}
+                {data.goalSummaries.length > 3 && (
+                  <Button variant="ghost" size="sm" className="col-span-full w-full" asChild>
+                    <Link to="/goals">
+                      {t('dashboard.otherGoals', { count: data.goalSummaries.length - 3 })}
+                    </Link>
+                  </Button>
+                )}
+              </ItemGroup>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Liabilities overview */}
-      {data.liabilities.length > 0 && (
-        <LiabilitiesCard
-          liabilities={data.liabilities}
-          totalMonthlyPayment={data.totalMonthlyPayment ?? null}
-        />
-      )}
+        {/* Liabilities overview */}
+        {data.liabilities.length > 0 && (
+          <LiabilitiesCard
+            liabilities={data.liabilities}
+            totalMonthlyPayment={data.totalMonthlyPayment ?? null}
+          />
+        )}
+      </div>
 
       {/* Holdings overview */}
       <HoldingsCard />

@@ -26,7 +26,7 @@ export function AppLayout() {
         {/* Mobile: main stops where the fixed bottom nav starts (64px bar + bottom-4 + safe area);
             the p-4 gutter matches the nav's inset-x-4 and keeps the last card off its edge. */}
         <div className="flex flex-1 flex-col overflow-auto p-4 md:px-6 md:py-2 lg:px-8">
-          <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col">
+          <div className="flex w-full flex-1 flex-col">
             <DesktopUpdateBanner />
             <Outlet />
           </div>

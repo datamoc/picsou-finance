@@ -676,7 +676,7 @@ export function AccountsPage() {
       {isAccountsError ? (
         <ErrorState title={t('common.error')} onRetry={() => void refetchAccounts()} />
       ) : isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-32 w-full rounded-xl" />
           ))}
@@ -697,7 +697,7 @@ export function AccountsPage() {
           {displayWalletGroups.map(({ wallet, pockets: walletPockets }, wIndex) => (
             <div key={wallet.id} className={cn('space-y-2', reorderActive && wallet.listCollapsed && 'opacity-60')}>
               {/* Parent wallet card — same column width as regular account cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 <AccountCard
                   account={wallet}
                   closed={closedPeerLoanIds.has(wallet.id)}
@@ -754,7 +754,7 @@ export function AccountsPage() {
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {t('pockets.subAccountsCount', { count: walletPockets.length })}
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                   {walletPockets.map((pocket) => (
                     <PocketCard
                       key={pocket.id}
@@ -769,7 +769,7 @@ export function AccountsPage() {
 
           {/* Standalone accounts — normal responsive grid */}
           {displayStandalone.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {displayStandalone.map((account, sIndex) => (
                 <div key={account.id} className={cn('h-full', reorderActive && account.listCollapsed && 'opacity-60')}>
                   <AccountCard

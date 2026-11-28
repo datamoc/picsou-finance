@@ -11,7 +11,7 @@ import {
   type DistributionItem,
 } from './distribution-labels'
 import { squarify, type TreemapRect } from '@/lib/treemap'
-import { formatPercent } from '@/lib/utils'
+import { cn, formatPercent } from '@/lib/utils'
 
 /** One decimal, except a nonzero share that would round to 0.0 — it keeps two so it does not read as empty. */
 function formatShare(points: number): string {
@@ -29,6 +29,7 @@ const chartConfig = {
 
 interface DistributionPieProps {
   data: DistributionItem[]
+  className?: string
 }
 
 function TooltipAnchor({ rect }: { rect: Rect }) {
@@ -118,7 +119,7 @@ function AllocationTreemap({ data }: { data: DistributionItem[] }) {
   )
 }
 
-export function DistributionPie({ data }: DistributionPieProps) {
+export function DistributionPie({ data, className }: DistributionPieProps) {
   const { t } = useTranslation()
   const displayData = useMemo(
     () => disambiguateDistributionNames(data, type => t(accountTypeLabelKey(type))),
@@ -126,7 +127,7 @@ export function DistributionPie({ data }: DistributionPieProps) {
   )
 
   return (
-    <Card className="h-[420px]">
+    <Card className={cn('h-[420px]', className)}>
       <Tabs defaultValue="distribution" className="h-full w-full gap-0">
         <CardHeader className="shrink-0 space-y-2.5">
           <CardTitle>{t('dashboard.distributionTitle')}</CardTitle>
@@ -187,7 +188,7 @@ export function DistributionPie({ data }: DistributionPieProps) {
                   </Pie>
                 </PieChart>
               </ChartContainer>
-              <div className="mt-2 grid min-h-0 grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto">
+              <div className="mt-2 grid min-h-0 grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto 2xl:grid-cols-3">
                 {displayData.map(item => (
                   <div key={item.accountId} className="flex items-center gap-2 text-sm">
                     <div className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />
