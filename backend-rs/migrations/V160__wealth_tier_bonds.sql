@@ -6,7 +6,7 @@
 -- which give BONDS 20 % (taken from EQUITY): the DEFAULT below mirrors only the column's
 -- value for a row written without it, not that default.
 --
--- V161: follows V159 (linxea sidecar session) and V160 (roadmap features).
+-- V160: follows V159 (linxea sidecar session).
 ALTER TABLE member_allocation_profile
     ADD COLUMN bonds_pct NUMERIC(5, 2) NOT NULL DEFAULT 0,
     DROP CONSTRAINT ck_member_allocation_profile_sum,
