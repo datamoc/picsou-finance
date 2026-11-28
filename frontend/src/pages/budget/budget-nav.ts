@@ -11,6 +11,7 @@ export type BudgetSection =
   | 'spending'
   | 'subscriptions'
   | 'envelopes'
+  | 'events'
   | 'review'
   | 'transactions'
   | 'settings'
@@ -31,6 +32,7 @@ export const BUDGET_NAV: BudgetNavItem[] = [
   { section: 'spending', to: 'spending', labelKey: 'budget.tab.cashflow' },
   { section: 'subscriptions', to: 'subscriptions', labelKey: 'budget.tab.recurring' },
   { section: 'envelopes', to: 'envelopes', labelKey: 'budget.tab.envelopes' },
+  { section: 'events', to: 'events', labelKey: 'budget.tab.events' },
   { section: 'review', to: 'review', labelKey: 'budget.tab.categorize', badge: true },
   { section: 'transactions', to: 'transactions', labelKey: 'budget.tab.transactions' },
   { section: 'settings', to: 'settings', labelKey: 'budget.tab.manage' },

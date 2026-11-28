@@ -17,6 +17,7 @@ import { NetWorthChart } from '@/components/shared/NetWorthChart'
 import { HoldingsTable } from '@/components/shared/HoldingsTable'
 import { PositionsByProduct } from '@/components/shared/PositionsByProduct'
 import { RealizedPnlSection } from '@/components/shared/RealizedPnlSection'
+import { CostBasisCard } from '@/components/shared/CostBasisCard'
 import { TransactionsList } from '@/components/shared/TransactionsList'
 import { AddTransactionModal } from '@/components/shared/AddTransactionModal'
 import { AccountForm, type AccountFormData } from '@/components/shared/AccountForm'
@@ -552,6 +553,7 @@ export function AccountDetailPage() {
 
       {/* Realized P&L on closed positions (investment accounts only) */}
       {showHoldings && <RealizedPnlSection key={`realized-${accountId}`} accountId={accountId} enabled={showHoldings} />}
+      {showHoldings && <CostBasisCard key={`costbasis-${accountId}`} accountId={accountId} />}
 
       {/* Savings accounts: split into Overview / Config tabs so the page stays clean. */}
       {isSavings && account ? (

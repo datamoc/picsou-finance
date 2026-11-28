@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Roadmap standalone suite (Health Center, Contribution Limits, Rebalancing Worksheet, TWR/MWR Performance & Benchmarks, FIRE Simulator, Virtual Portfolios, Custom Taxonomies, Consolidated Income, Integrated AI Assistant & AI CSV Mapping, Budget Splits & Events, FIFO/LIFO/HIFO Cost Basis & Stock Splits, Resilient Market Data Chain, Encrypted Backups, Isolated Desktop Profiles, Compact Numbers, and SVG Chart Export).** All implemented natively in Rust and React with dual-engine PostgreSQL (`V160`) and SQLite (`V7`) migrations, zero Docker and zero Python.
 - **Linxea connector.** Synchronize Linxea PER, life-insurance (*assurance vie*), and PEA contracts
   (supports, euro funds, units, average buy-in, P&L, and EUR valuation) natively on Picsou Desktop
   via an embedded OS WebView login (`WebView2` / `WKWebView` / `WebKitGTK`) and pure-Rust XLSX

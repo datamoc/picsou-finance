@@ -5,6 +5,7 @@ import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from '@/feature
 import { useAccounts } from '@/features/accounts/hooks'
 import { useMemberProfile } from '@/features/profile/hooks'
 import { AllocationPicker } from './AllocationPicker'
+import { ContributionLimitsSection } from './ContributionLimitsSection'
 import { allocatedTotal, hasIncompleteAllocations } from './plan-math'
 import { SavingsRateCard } from './SavingsRateCard'
 import { parseRecurringGoalPrefill } from '@/pages/analysis/projection-inflow'
@@ -286,6 +287,8 @@ export function GoalsPage() {
           )}
         </div>
       )}
+
+      <ContributionLimitsSection />
 
       {/* Goal detail modal */}
       <GoalDetailModal

@@ -1,4 +1,4 @@
-import { SquaresFour, Wallet, Triangle, Target, ChartPieSlice, GearSix, Users } from '@phosphor-icons/react'
+import { SquaresFour, Wallet, Triangle, Target, ChartPieSlice, GearSix, Users, Heartbeat, Sparkle } from '@phosphor-icons/react'
 
 export const NAV_ITEMS = [
   { path: '/', icon: SquaresFour, labelKey: 'nav.dashboard', descKey: 'nav.dashboard.desc' },
@@ -6,6 +6,8 @@ export const NAV_ITEMS = [
   { path: '/analysis', icon: Triangle, labelKey: 'nav.analysis', descKey: 'nav.analysis.desc' },
   { path: '/goals', icon: Target, labelKey: 'nav.goals', descKey: 'nav.goals.desc' },
   { path: '/budget', icon: ChartPieSlice, labelKey: 'nav.budget', descKey: 'nav.budget.desc' },
+  { path: '/health', icon: Heartbeat, labelKey: 'nav.health', descKey: 'nav.health.desc' },
+  { path: '/assistant', icon: Sparkle, labelKey: 'nav.assistant', descKey: 'nav.assistant.desc' },
 ] as const
 
 export const FAMILY_NAV_ITEM = {

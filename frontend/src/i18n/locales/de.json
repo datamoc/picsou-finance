@@ -34,7 +34,8 @@
     "skipToContent": "Skip to main content",
     "category": "Category",
     "notFound": "Eintrag nicht gefunden.",
-    "exportSvg": "Als SVG exportieren"
+    "exportSvg": "Als SVG exportieren",
+    "open": "Öffnen"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -58,7 +59,11 @@
     "hideAmounts": "Beträge ausblenden",
     "showAmounts": "Beträge einblenden",
     "budget": "Budget",
-    "budget.desc": "Spending & cashflow"
+    "budget.desc": "Spending & cashflow",
+    "health": "Datenstatus",
+    "health.desc": "Datenqualität und Diagnose",
+    "assistant": "Assistent",
+    "assistant.desc": "Fragen zum Portfolio mit KI"
   },
   "auth": {
     "login": "Anmelden",
@@ -505,7 +510,13 @@
     "tabs": {
       "pyramid": "Pyramide",
       "diversification": "Diversifikation",
-      "projection": "Projektion"
+      "projection": "Projektion",
+      "performance": "Performance",
+      "rebalance": "Rebalancing",
+      "fire": "Rente & FIRE",
+      "income": "Erträge",
+      "portfolios": "Portfolios",
+      "taxonomies": "Taxonomien"
     },
     "alertsTitle": "Wichtige Hinweise",
     "allocationCardTitle": "Aufteilung nach Anlageklasse"
@@ -3129,7 +3140,8 @@
       "description": "Buchungstext",
       "debit": "Soll",
       "credit": "Haben"
-    }
+    },
+    "aiSuggest": "KI-Zuordnung"
   },
   "realized": {
     "title": "Realisierte Gewinne",
@@ -3470,7 +3482,8 @@
       "recurring": "Recurring",
       "categorize": "To categorize",
       "transactions": "Transactions",
-      "manage": "Manage"
+      "manage": "Manage",
+      "events": "Ereignisse"
     },
     "a11y": {
       "edit": "Edit {{name}}",
@@ -3949,5 +3962,275 @@
       "checking": "Suche läuft...",
       "checkFailed": "Updates konnten nicht geprüft werden."
     }
+  },
+  "health": {
+    "title": "Daten-Gesundheitszentrum",
+    "refresh": "Aktualisieren",
+    "score": "Qualitätswert",
+    "criticalAndErrors": "Kritisch & Fehler",
+    "criticalCount": "{{count}} kritisch",
+    "warnings": "Warnungen",
+    "infoCount": "{{count}} Hinweise",
+    "dismissed": "Ausgeblendet",
+    "showActive": "Aktive anzeigen",
+    "showDismissed": "Ausgeblendete anzeigen",
+    "allClearTitle": "Alles in Ordnung",
+    "allClearDesc": "Keine aktiven Probleme bei Konten, Kursen oder Klassifizierungen erkannt.",
+    "emptyDismissedTitle": "Keine ausgeblendeten Hinweise",
+    "emptyDismissedDesc": "Ausgeblendete Hinweise erscheinen hier.",
+    "affectedItems": "{{count}} Einträge",
+    "dismiss": "Ausblenden",
+    "restore": "Wiederherstellen",
+    "showDetails": "Details anzeigen",
+    "hideDetails": "Details ausblenden",
+    "severity": {
+      "CRITICAL": "Kritisch",
+      "ERROR": "Fehler",
+      "WARNING": "Warnung",
+      "INFO": "Info"
+    },
+    "issues": {
+      "priceStaleness": {
+        "title": "Veraltete oder fehlende Kurse",
+        "description": "Einige Positionen haben veraltete Bewertungen oder keinen bekannten Marktpreis."
+      },
+      "unclassified": {
+        "title": "Nicht klassifizierte Positionen",
+        "description": "Einigen Wertpapieren fehlt ein vollständiges Sektor- oder Länderprofil."
+      },
+      "missingCostBasis": {
+        "title": "Fehlende Einstandskurse",
+        "description": "Der durchschnittliche Kaufpreis fehlt bei einigen Positionen."
+      },
+      "fxAccounts": {
+        "title": "Fremdwährungskonten",
+        "description": "Nicht-EUR-Konten hängen von Wechselkursen für die Gesamtbewertung ab."
+      },
+      "staleSync": {
+        "title": "Veraltete Synchronisierungen",
+        "description": "Einige verbundene Konten wurden seit über 14 Tagen nicht aktualisiert."
+      },
+      "historyGap": {
+        "title": "Konten ohne Verlauf",
+        "description": "Aktive Konten ohne historische Saldenpunkte."
+      }
+    },
+    "actions": {
+      "syncPrices": "Jetzt synchronisieren",
+      "classifyHoldings": "Klassifizieren",
+      "reviewAccounts": "Konten prüfen",
+      "openSync": "Synchronisierung öffnen"
+    }
+  },
+  "limits": {
+    "title": "Einzahlungslimits",
+    "description": "Verfolgen Sie jährliche oder kumulierte Einzahlungsgrenzen.",
+    "add": "Limit hinzufügen",
+    "presetsLabel": "Vorlagen:",
+    "empty": "Noch keine Einzahlungslimits konfiguriert.",
+    "periodAnnual": "Jahreslimit ({{year}})",
+    "periodLifetime": "Gesamtlimit",
+    "annual": "Jährlich",
+    "lifetime": "Gesamt",
+    "remaining": "Verbleibender Spielraum",
+    "createTitle": "Neues Einzahlungslimit",
+    "editTitle": "Limit bearbeiten",
+    "status": {
+      "OK": "Im Rahmen",
+      "NEAR_LIMIT": "Nahe am Limit",
+      "EXCEEDED": "Überschritten"
+    },
+    "fields": {
+      "name": "Name",
+      "amount": "Limit (EUR)",
+      "period": "Zeitraum",
+      "accounts": "Verknüpfte Konten"
+    }
+  },
+  "rebalance": {
+    "title": "Rebalancing-Plan",
+    "description": "Berechnen Sie Kauf- und Verkaufsaufträge zur Wiederherstellung Ihrer Zielallokation.",
+    "exportCsv": "CSV exportieren",
+    "cashContribution": "Neuer Kapitalzufluss (EUR)",
+    "driftBand": "Toleranzband (%)",
+    "cashOnly": "Nur Zukauf (ohne Verkauf)",
+    "cashOnlyHint": "Verteilt frisches Kapital ausschließlich auf untergewichtete Klassen.",
+    "maxDriftBefore": "Max. Abweichung vorher",
+    "maxDriftAfter": "Max. Abweichung nachher",
+    "cashForZeroDrift": "Kapital für 0 % Abweichung ohne Verkauf",
+    "driftDriver": "Außerhalb Band",
+    "action": {
+      "BUY": "Kaufen",
+      "SELL": "Verkaufen",
+      "HOLD": "Halten"
+    },
+    "columns": {
+      "tier": "Klasse",
+      "current": "Aktuell",
+      "target": "Ziel",
+      "drift": "Abweichung",
+      "order": "Empfohlener Auftrag",
+      "post": "Nach Umsetzung"
+    }
+  },
+  "performance": {
+    "twr": "TWR-Rendite",
+    "mwr": "MWR (IZF)",
+    "mwrHint": "Kapitalgewichtete Rendite",
+    "totalGain": "Nettogewinn",
+    "netFlows": "Nettozuflüsse",
+    "maxDrawdown": "Max. Drawdown",
+    "volatility": "Volatilität {{value}}",
+    "insufficientVol": "Zu wenig Daten",
+    "trackingModes": "Erfassungsmodi",
+    "txMode": "{{count}} Transaktionen",
+    "snapshotMode": "{{count}} Bestände",
+    "annualized": "Annualisiert: {{value}}",
+    "periodReturn": "Periodenrendite",
+    "noBenchmark": "Kein Index",
+    "portfolioSeries": "Portfolio (Basis 100)",
+    "benchmarkSeries": "Benchmark (Basis 100)",
+    "chartTitle": "Wertentwicklung Basis 100 (TWR)",
+    "chartDesc": "Zeitgewichtete Rendite im Vergleich zu einem Referenzindex.",
+    "empty": "Mindestens zwei Bewertungszeitpunkte sind erforderlich."
+  },
+  "planning": {
+    "fireTitle": "Renten- & FIRE-Simulator",
+    "fireDesc": "Schätzen Sie Ihr FIRE-Ziel, Renteneintrittsalter und die Kapitaldauer.",
+    "realBalance": "Reales Vermögen",
+    "nominalBalance": "Nominales Vermögen",
+    "fields": {
+      "currentAge": "Aktuelles Alter",
+      "retirementAge": "Rentenalter",
+      "lifeExpectancy": "Lebenserwartung",
+      "currentSavings": "Aktuelles Kapital (EUR)",
+      "monthlyContribution": "Monatliche Sparrate (EUR)",
+      "expectedReturn": "Erwartete Rendite (%)",
+      "inflation": "Inflation (%)",
+      "monthlySpend": "Monatlicher Bedarf (EUR)",
+      "swr": "Entnahmerate (%)"
+    },
+    "kpi": {
+      "fiNumber": "FIRE-Ziel",
+      "fiAge": "Erreicht mit {{age}} Jahren (in {{years}} J.)",
+      "fiNotReached": "Nicht im Zeitraum erreicht",
+      "coastFire": "Coast-FIRE-Ziel",
+      "fundedRatio": "Aktuelle Deckung: {{pct}}",
+      "atRetirement": "Reales Kapital bei Renteneintritt",
+      "sustainableMonthly": "Nachhaltige monatliche Entnahme",
+      "longevity": "Kapitaldauer",
+      "perpetual": "Ausreichend bis zum Horizont",
+      "depletedAt": "Aufgebraucht mit {{age}} Jahren"
+    },
+    "saveUpTitle": "Sparziel-Simulator",
+    "saveUpDesc": "Berechnen Sie die Dauer bis zu einem Zielbetrag mit Zinseszins.",
+    "saveUp": {
+      "target": "Zielbetrag (EUR)",
+      "current": "Startkapital (EUR)",
+      "monthly": "Monatliche Rate (EUR)",
+      "returnPct": "Rendite (%)",
+      "horizon": "Geschätzte Dauer",
+      "monthsValue": "{{months}} Monate ({{years}} J.)",
+      "unreachable": "Nicht erreichbar",
+      "contributed": "Eingezahlt",
+      "growth": "Zinseszinsgewinn"
+    }
+  },
+  "portfolios": {
+    "title": "Virtuelle Portfolios",
+    "description": "Gruppieren Sie Konten frei nach Strategie oder Ziel.",
+    "create": "Neues Portfolio",
+    "empty": "Noch keine virtuellen Portfolios erstellt.",
+    "accountCount": "{{count}} Konto/Konten",
+    "viewPerformance": "Performance",
+    "createTitle": "Virtuelles Portfolio erstellen",
+    "editTitle": "Portfolio bearbeiten",
+    "fields": {
+      "name": "Name",
+      "description": "Beschreibung",
+      "accounts": "Enthaltene Konten"
+    }
+  },
+  "assistant": {
+    "title": "Portfolio-Assistent",
+    "newChat": "Neuer Chat",
+    "newChatTitle": "Portfolio-Chat",
+    "conversations": "Unterhaltungen",
+    "noSessions": "Keine gespeicherten Unterhaltungen.",
+    "welcomeTitle": "Fragen Sie Ihr Portfolio",
+    "welcomeDesc": "Nutzt den in der Administration konfigurierten KI-Anbieter.",
+    "tryAsking": "Beispielfragen:",
+    "inputPlaceholder": "Stellen Sie eine Frage zu Ihren Konten oder Ausgaben...",
+    "send": "Senden",
+    "suggestions": {
+      "summary": "Gib mir einen kompakten Überblick über mein Nettovermögen.",
+      "concentration": "Wo liegen meine größten Klumpenrisiken?",
+      "feesAndCash": "Wie hoch ist mein Liquiditätsanteil?"
+    }
+  },
+  "budgetEvents": {
+    "title": "Ausgaben-Ereignisse",
+    "description": "Bündeln Sie Transaktionen für Reisen oder Projekte.",
+    "create": "Neues Ereignis",
+    "emptyTitle": "Keine Ereignisse",
+    "emptyDesc": "Erstellen Sie ein Ereignis für ein eigenes Projektbudget.",
+    "txCount": "{{count}} Transaktion(en)",
+    "createTitle": "Ereignis erstellen",
+    "editTitle": "Ereignis bearbeiten",
+    "fields": {
+      "name": "Name",
+      "description": "Beschreibung",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "budget": "Zielbudget (EUR)"
+    }
+  },
+  "budgetSplits": {
+    "title": "Auf Kategorien aufteilen",
+    "addLine": "Zeile hinzufügen",
+    "balanced": "Ausgeglichen",
+    "remaining": "Rest: {{amount}}",
+    "saved": "Aufteilung gespeichert.",
+    "clear": "Aufteilung entfernen"
+  },
+  "taxonomies": {
+    "title": "Eigene Taxonomien",
+    "description": "Definieren Sie eigene Klassifizierungsachsen für Ihre Wertpapiere.",
+    "newPlaceholder": "Name der Achse (z. B. Liquidität)",
+    "create": "Achse erstellen",
+    "classifiedTotal": "Klassifizierter Wert",
+    "addCategory": "Neue Kategorie",
+    "categoryPlaceholder": "z. B. Sehr liquide",
+    "assignTicker": "Ticker zuweisen",
+    "assign": "Zuweisen"
+  },
+  "income": {
+    "totalYear": "Kapitalerträge ({{year}})",
+    "monthlyAvg": "Monatsdurchschnitt",
+    "yoyChange": "Vorjahresvergleich",
+    "currencies": "Erhaltene Währungen",
+    "unconvertedNotice": "Währungen ohne EUR-Umrechnung: {{currencies}}.",
+    "chartTitle": "Monatliche Kapitalerträge",
+    "chartDesc": "Erhaltene Dividenden, Zinsen und Ausschüttungen.",
+    "topPayers": "Wichtigste Ertragsquellen",
+    "payments": "{{count}} Zahlung(en)",
+    "kinds": {
+      "dividends": "Dividenden",
+      "interest": "Zinsen",
+      "scpi": "SCPI"
+    }
+  },
+  "costBasis": {
+    "title": "Einstandskursmethode & Aktiensplits",
+    "description": "Wählen Sie die Bewertungsmethode für realisierte Gewinne und erfassen Sie Splits.",
+    "methodLabel": "Bewertungsmethode",
+    "methods": {
+      "AVERAGE": "Durchschnitt",
+      "FIFO": "FIFO",
+      "LIFO": "LIFO",
+      "HIFO": "HIFO"
+    },
+    "splitsTitle": "Aktiensplits",
+    "addSplit": "Hinzufügen"
   }
 }

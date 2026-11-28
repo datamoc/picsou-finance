@@ -34,7 +34,8 @@
     "done": "Terminé",
     "labelColon": "{{label}} :",
     "notFound": "Élément introuvable.",
-    "exportSvg": "Exporter en SVG"
+    "exportSvg": "Exporter en SVG",
+    "open": "Ouvrir"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -58,7 +59,11 @@
     "analysis": "Analyse",
     "analysis.desc": "Répartition et diversification",
     "hideAmounts": "Masquer les montants",
-    "showAmounts": "Afficher les montants"
+    "showAmounts": "Afficher les montants",
+    "health": "Santé",
+    "health.desc": "Diagnostic et qualité des données",
+    "assistant": "Assistant",
+    "assistant.desc": "Questions sur votre patrimoine avec intelligence artificielle"
   },
   "auth": {
     "login": "Connexion",
@@ -516,7 +521,13 @@
     "tabs": {
       "pyramid": "Pyramide",
       "diversification": "Diversification",
-      "projection": "Projection"
+      "projection": "Projection",
+      "performance": "Performance",
+      "rebalance": "Rééquilibrage",
+      "fire": "Retraite et FIRE",
+      "income": "Revenus",
+      "portfolios": "Portefeuilles",
+      "taxonomies": "Taxonomies"
     },
     "alertsTitle": "Points d'attention",
     "allocationCardTitle": "Répartition par classe d'actifs"
@@ -999,7 +1010,8 @@
       "recurring": "Récurrents",
       "categorize": "À catégoriser",
       "transactions": "Transactions",
-      "manage": "Gérer"
+      "manage": "Gérer",
+      "events": "Événements"
     },
     "a11y": {
       "edit": "Modifier {{name}}",
@@ -3493,7 +3505,8 @@
       "description": "Libellé",
       "debit": "Débit",
       "credit": "Crédit"
-    }
+    },
+    "aiSuggest": "Mapper avec intelligence artificielle"
   },
   "realized": {
     "title": "Plus-values réalisées",
@@ -3949,5 +3962,275 @@
       "checking": "Vérification...",
       "checkFailed": "Impossible de vérifier les mises à jour."
     }
+  },
+  "health": {
+    "title": "Centre de santé des données",
+    "refresh": "Actualiser",
+    "score": "Score de santé",
+    "criticalAndErrors": "Critiques et erreurs",
+    "criticalCount": "{{count}} critique(s)",
+    "warnings": "Avertissements",
+    "infoCount": "{{count}} information(s)",
+    "dismissed": "Masquées",
+    "showActive": "Voir les alertes actives",
+    "showDismissed": "Voir les masquées",
+    "allClearTitle": "Tout est en ordre",
+    "allClearDesc": "Aucune anomalie active détectée sur vos comptes, cours ou classifications.",
+    "emptyDismissedTitle": "Aucune anomalie masquée",
+    "emptyDismissedDesc": "Les alertes que vous masquez apparaîtront ici.",
+    "affectedItems": "{{count}} élément(s)",
+    "dismiss": "Masquer",
+    "restore": "Rétablir",
+    "showDetails": "Afficher les détails",
+    "hideDetails": "Masquer les détails",
+    "severity": {
+      "CRITICAL": "Critique",
+      "ERROR": "Erreur",
+      "WARNING": "Avertissement",
+      "INFO": "Information"
+    },
+    "issues": {
+      "priceStaleness": {
+        "title": "Cours périmés ou manquants",
+        "description": "Certaines positions n’ont pas été valorisées récemment ou n’ont aucun prix connu."
+      },
+      "unclassified": {
+        "title": "Titres non classifiés",
+        "description": "Des positions ne possèdent pas encore de profil sectoriel ou géographique complet."
+      },
+      "missingCostBasis": {
+        "title": "Prix de revient manquant",
+        "description": "Le prix de revient moyen est absent sur certaines lignes, ce qui limite le calcul de plus-value."
+      },
+      "fxAccounts": {
+        "title": "Comptes en devises étrangères",
+        "description": "Des comptes libellés hors euro dépendent des taux de change pour la valorisation consolidée."
+      },
+      "staleSync": {
+        "title": "Synchronisations anciennes",
+        "description": "Certains comptes connectés n’ont pas été synchronisés depuis plus de 14 jours."
+      },
+      "historyGap": {
+        "title": "Comptes sans historique",
+        "description": "Des comptes actifs ne disposent pas encore de relevés historiques pour les courbes."
+      }
+    },
+    "actions": {
+      "syncPrices": "Synchroniser",
+      "classifyHoldings": "Classifier les titres",
+      "reviewAccounts": "Voir les comptes",
+      "openSync": "Ouvrir la synchronisation"
+    }
+  },
+  "limits": {
+    "title": "Plafonds de versement",
+    "description": "Suivez vos versements sur vos enveloppes fiscales et livrets réglementés.",
+    "add": "Ajouter un plafond",
+    "presetsLabel": "Modèles rapides :",
+    "empty": "Aucun plafond configuré. Sélectionnez un modèle (PEA, Livret A, LDDS, LEP, PER) pour commencer.",
+    "periodAnnual": "Plafond annuel ({{year}})",
+    "periodLifetime": "Plafond cumulé",
+    "annual": "Annuel",
+    "lifetime": "Cumulé",
+    "remaining": "Reste à verser",
+    "createTitle": "Nouveau plafond de versement",
+    "editTitle": "Modifier le plafond",
+    "status": {
+      "OK": "Conforme",
+      "NEAR_LIMIT": "Proche du plafond",
+      "EXCEEDED": "Dépassé"
+    },
+    "fields": {
+      "name": "Nom",
+      "amount": "Plafond (EUR)",
+      "period": "Type de plafond",
+      "accounts": "Comptes associés"
+    }
+  },
+  "rebalance": {
+    "title": "Feuille de rééquilibrage",
+    "description": "Calculez les ordres à passer pour revenir à votre allocation cible avec ou sans vente.",
+    "exportCsv": "Exporter CSV",
+    "cashContribution": "Apport de liquidités (EUR)",
+    "driftBand": "Bande de dérive tolérée (%)",
+    "cashOnly": "Sans vente (apport uniquement)",
+    "cashOnlyHint": "Réduit la dérive en n’achetant que les poches sous-pondérées.",
+    "maxDriftBefore": "Dérive maximale avant",
+    "maxDriftAfter": "Dérive maximale après",
+    "cashForZeroDrift": "Apport pour zéro dérive sans vendre",
+    "driftDriver": "Hors bande",
+    "action": {
+      "BUY": "Acheter",
+      "SELL": "Vendre",
+      "HOLD": "Conserver"
+    },
+    "columns": {
+      "tier": "Poche",
+      "current": "Actuel",
+      "target": "Cible",
+      "drift": "Dérive",
+      "order": "Ordre conseillé",
+      "post": "Après opération"
+    }
+  },
+  "performance": {
+    "twr": "Rendement TWR",
+    "mwr": "Rendement MWR (TRI)",
+    "mwrHint": "Pondéré par les flux de trésorerie",
+    "totalGain": "Gain net",
+    "netFlows": "Apports nets",
+    "maxDrawdown": "Perte maximale",
+    "volatility": "Volatilité {{value}}",
+    "insufficientVol": "Historique insuffisant",
+    "trackingModes": "Modes de suivi",
+    "txMode": "{{count}} flux",
+    "snapshotMode": "{{count}} positions",
+    "annualized": "Annualisé : {{value}}",
+    "periodReturn": "Sur la période",
+    "noBenchmark": "Sans indice",
+    "portfolioSeries": "Portefeuille (base 100)",
+    "benchmarkSeries": "Indice (base 100)",
+    "chartTitle": "Évolution base 100 (TWR)",
+    "chartDesc": "Performance neutralisée des apports et retraits, comparée à un indice de référence.",
+    "empty": "Ajoutez au moins deux points d’historique pour afficher la courbe de performance."
+  },
+  "planning": {
+    "fireTitle": "Simulateur Retraite et FIRE",
+    "fireDesc": "Estimez votre capital d’indépendance financière, votre âge FIRE et la pérennité de votre décaissement.",
+    "realBalance": "Patrimoine réel (euros constants)",
+    "nominalBalance": "Patrimoine nominal",
+    "fields": {
+      "currentAge": "Âge actuel",
+      "retirementAge": "Âge cible",
+      "lifeExpectancy": "Horizon (âge)",
+      "currentSavings": "Capital investi (EUR)",
+      "monthlyContribution": "Épargne mensuelle (EUR)",
+      "expectedReturn": "Rendement annuel (%)",
+      "inflation": "Inflation (%)",
+      "monthlySpend": "Dépenses retraite / mois (EUR)",
+      "swr": "Taux de retrait sûr (%)"
+    },
+    "kpi": {
+      "fiNumber": "Objectif FIRE",
+      "fiAge": "Atteint à {{age}} ans (dans {{years}} ans)",
+      "fiNotReached": "Non atteint sur cet horizon",
+      "coastFire": "Seuil Coast FIRE",
+      "fundedRatio": "Couverture actuelle : {{pct}}",
+      "atRetirement": "Capital réel à la retraite",
+      "sustainableMonthly": "Retrait mensuel durable",
+      "longevity": "Tenue du capital",
+      "perpetual": "Pérenne jusqu’à l’horizon",
+      "depletedAt": "Épuisé à {{age}} ans"
+    },
+    "saveUpTitle": "Simulateur d’objectif d’épargne",
+    "saveUpDesc": "Calculez le temps nécessaire pour atteindre un montant cible avec intérêts composés.",
+    "saveUp": {
+      "target": "Montant cible (EUR)",
+      "current": "Épargne initiale (EUR)",
+      "monthly": "Versement mensuel (EUR)",
+      "returnPct": "Rendement annuel (%)",
+      "horizon": "Durée estimée",
+      "monthsValue": "{{months}} mois ({{years}} ans)",
+      "unreachable": "Objectif non atteignable",
+      "contributed": "Total versé",
+      "growth": "Gains composés"
+    }
+  },
+  "portfolios": {
+    "title": "Portefeuilles virtuels",
+    "description": "Regroupez librement vos comptes par stratégie ou objectif pour analyser leur valorisation et performance.",
+    "create": "Nouveau portefeuille",
+    "empty": "Aucun portefeuille virtuel. Créez des vues dédiées (ex. Retraite, Bourse long terme, Liquidités).",
+    "accountCount": "{{count}} compte(s)",
+    "viewPerformance": "Performance",
+    "createTitle": "Créer un portefeuille virtuel",
+    "editTitle": "Modifier le portefeuille",
+    "fields": {
+      "name": "Nom",
+      "description": "Description",
+      "accounts": "Comptes inclus"
+    }
+  },
+  "assistant": {
+    "title": "Assistant patrimonial",
+    "newChat": "Nouvelle discussion",
+    "newChatTitle": "Discussion patrimoniale",
+    "conversations": "Discussions",
+    "noSessions": "Aucune conversation enregistrée.",
+    "welcomeTitle": "Interrogez votre patrimoine",
+    "welcomeDesc": "Utilise le fournisseur d’intelligence artificielle configuré dans Administration (Ollama local ou clé API).",
+    "tryAsking": "Idées de questions :",
+    "inputPlaceholder": "Posez une question sur vos comptes, positions ou dépenses...",
+    "send": "Envoyer",
+    "suggestions": {
+      "summary": "Fais un bilan synthétique de mon patrimoine et de sa répartition.",
+      "concentration": "Quelles sont mes principales concentrations par compte ou par titre ?",
+      "feesAndCash": "Quelle est ma part de liquidités par rapport à mes investissements ?"
+    }
+  },
+  "budgetEvents": {
+    "title": "Événements de dépenses",
+    "description": "Regroupez des transactions liées à un projet ponctuel (vacances, travaux, déménagement).",
+    "create": "Nouvel événement",
+    "emptyTitle": "Aucun événement",
+    "emptyDesc": "Créez un événement pour suivre un budget dédié indépendamment des catégories mensuelles.",
+    "txCount": "{{count}} transaction(s)",
+    "createTitle": "Créer un événement",
+    "editTitle": "Modifier l’événement",
+    "fields": {
+      "name": "Nom",
+      "description": "Description",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "budget": "Budget cible (EUR)"
+    }
+  },
+  "budgetSplits": {
+    "title": "Ventiler entre plusieurs catégories",
+    "addLine": "Ajouter une ligne",
+    "balanced": "Montant équilibré",
+    "remaining": "Reste : {{amount}}",
+    "saved": "Ventilation enregistrée.",
+    "clear": "Supprimer la ventilation"
+  },
+  "taxonomies": {
+    "title": "Taxonomies personnalisées",
+    "description": "Créez vos propres axes d’analyse (risque, liquidité, enveloppe fiscale) et affectez-y vos titres.",
+    "newPlaceholder": "Nom de l’axe (ex. Liquidité, Niveau de risque)",
+    "create": "Créer l’axe",
+    "classifiedTotal": "Valorisation classifiée",
+    "addCategory": "Nouvelle catégorie",
+    "categoryPlaceholder": "Ex. Très liquide",
+    "assignTicker": "Affecter un titre (ticker)",
+    "assign": "Affecter"
+  },
+  "income": {
+    "totalYear": "Revenus du capital ({{year}})",
+    "monthlyAvg": "Moyenne mensuelle",
+    "yoyChange": "Évolution annuelle",
+    "currencies": "Devises perçues",
+    "unconvertedNotice": "Devises sans conversion euro détectée : {{currencies}}.",
+    "chartTitle": "Revenus mensuels perçus",
+    "chartDesc": "Dividendes, intérêts et distributions SCPI réellement encaissés.",
+    "topPayers": "Principales sources de revenus",
+    "payments": "{{count}} versement(s)",
+    "kinds": {
+      "dividends": "Dividendes",
+      "interest": "Intérêts",
+      "scpi": "SCPI"
+    }
+  },
+  "costBasis": {
+    "title": "Méthode de prix de revient et divisions d’actions",
+    "description": "Choisissez la méthode comptable des plus-values réalisées et déclarez les splits d’actions.",
+    "methodLabel": "Méthode de calcul du prix de revient",
+    "methods": {
+      "AVERAGE": "CUMP (Moyenne)",
+      "FIFO": "FIFO",
+      "LIFO": "LIFO",
+      "HIFO": "HIFO"
+    },
+    "splitsTitle": "Divisions d’actions (splits)",
+    "addSplit": "Ajouter"
   }
 }

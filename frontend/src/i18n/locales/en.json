@@ -34,7 +34,8 @@
     "done": "Done",
     "labelColon": "{{label}}:",
     "notFound": "Item not found.",
-    "exportSvg": "Export as SVG"
+    "exportSvg": "Export as SVG",
+    "open": "Open"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -58,7 +59,11 @@
     "analysis": "Analysis",
     "analysis.desc": "Allocation & diversification",
     "hideAmounts": "Hide amounts",
-    "showAmounts": "Show amounts"
+    "showAmounts": "Show amounts",
+    "health": "Health",
+    "health.desc": "Data quality and diagnostics",
+    "assistant": "Assistant",
+    "assistant.desc": "Ask questions about your portfolio with AI"
   },
   "auth": {
     "login": "Sign in",
@@ -516,7 +521,13 @@
     "tabs": {
       "pyramid": "Pyramid",
       "diversification": "Diversification",
-      "projection": "Projection"
+      "projection": "Projection",
+      "performance": "Performance",
+      "rebalance": "Rebalancing",
+      "fire": "Retirement & FIRE",
+      "income": "Income",
+      "portfolios": "Portfolios",
+      "taxonomies": "Taxonomies"
     },
     "alertsTitle": "Key observations",
     "allocationCardTitle": "Allocation by asset class"
@@ -999,7 +1010,8 @@
       "recurring": "Recurring",
       "categorize": "To categorize",
       "transactions": "Transactions",
-      "manage": "Manage"
+      "manage": "Manage",
+      "events": "Events"
     },
     "a11y": {
       "edit": "Edit {{name}}",
@@ -3493,7 +3505,8 @@
       "description": "Label",
       "debit": "Debit",
       "credit": "Credit"
-    }
+    },
+    "aiSuggest": "AI map columns"
   },
   "realized": {
     "title": "Realized gains",
@@ -3949,5 +3962,275 @@
       "checking": "Checking...",
       "checkFailed": "Could not check for updates."
     }
+  },
+  "health": {
+    "title": "Data Health Center",
+    "refresh": "Refresh",
+    "score": "Health score",
+    "criticalAndErrors": "Critical & errors",
+    "criticalCount": "{{count}} critical",
+    "warnings": "Warnings",
+    "infoCount": "{{count}} informational",
+    "dismissed": "Dismissed",
+    "showActive": "Show active issues",
+    "showDismissed": "Show dismissed",
+    "allClearTitle": "All clear",
+    "allClearDesc": "No active issues detected across your accounts, quotes, or classifications.",
+    "emptyDismissedTitle": "No dismissed issues",
+    "emptyDismissedDesc": "Issues you dismiss will appear here.",
+    "affectedItems": "{{count}} item(s)",
+    "dismiss": "Dismiss",
+    "restore": "Restore",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "severity": {
+      "CRITICAL": "Critical",
+      "ERROR": "Error",
+      "WARNING": "Warning",
+      "INFO": "Info"
+    },
+    "issues": {
+      "priceStaleness": {
+        "title": "Stale or missing prices",
+        "description": "Some holdings have outdated valuations or no known market price."
+      },
+      "unclassified": {
+        "title": "Unclassified holdings",
+        "description": "Some holdings lack a complete sector or geography profile."
+      },
+      "missingCostBasis": {
+        "title": "Missing cost basis",
+        "description": "Average buy-in cost is missing on some holdings, limiting gain/loss accuracy."
+      },
+      "fxAccounts": {
+        "title": "Foreign currency accounts",
+        "description": "Non-EUR accounts rely on FX exchange rates for consolidated valuation."
+      },
+      "staleSync": {
+        "title": "Stale connector syncs",
+        "description": "Some connected accounts have not synced in more than 14 days."
+      },
+      "historyGap": {
+        "title": "Accounts without history",
+        "description": "Active accounts with no historical balance snapshots yet."
+      }
+    },
+    "actions": {
+      "syncPrices": "Sync now",
+      "classifyHoldings": "Classify holdings",
+      "reviewAccounts": "Review accounts",
+      "openSync": "Open sync"
+    }
+  },
+  "limits": {
+    "title": "Contribution limits",
+    "description": "Track cumulative or annual deposits across tax-advantaged accounts and savings caps.",
+    "add": "Add limit",
+    "presetsLabel": "Quick presets:",
+    "empty": "No contribution limits configured yet. Pick a preset (PEA, Livret A, LDDS, LEP, PER) to start.",
+    "periodAnnual": "Annual cap ({{year}})",
+    "periodLifetime": "Lifetime cap",
+    "annual": "Annual",
+    "lifetime": "Lifetime",
+    "remaining": "Remaining room",
+    "createTitle": "New contribution limit",
+    "editTitle": "Edit contribution limit",
+    "status": {
+      "OK": "On track",
+      "NEAR_LIMIT": "Near cap",
+      "EXCEEDED": "Exceeded"
+    },
+    "fields": {
+      "name": "Name",
+      "amount": "Limit (EUR)",
+      "period": "Cap type",
+      "accounts": "Linked accounts"
+    }
+  },
+  "rebalance": {
+    "title": "Rebalancing worksheet",
+    "description": "Generate concrete buy/sell orders to restore target allocation, with or without selling.",
+    "exportCsv": "Export CSV",
+    "cashContribution": "Cash contribution (EUR)",
+    "driftBand": "Allowed drift band (%)",
+    "cashOnly": "Cash-only (no selling)",
+    "cashOnlyHint": "Directs new cash only to underweight tiers to avoid triggering taxes.",
+    "maxDriftBefore": "Max drift before",
+    "maxDriftAfter": "Max drift after",
+    "cashForZeroDrift": "Cash needed for zero drift without selling",
+    "driftDriver": "Outside band",
+    "action": {
+      "BUY": "Buy",
+      "SELL": "Sell",
+      "HOLD": "Hold"
+    },
+    "columns": {
+      "tier": "Tier",
+      "current": "Current",
+      "target": "Target",
+      "drift": "Drift",
+      "order": "Suggested order",
+      "post": "After trade"
+    }
+  },
+  "performance": {
+    "twr": "TWR return",
+    "mwr": "MWR (IRR)",
+    "mwrHint": "Money-weighted return",
+    "totalGain": "Net gain",
+    "netFlows": "Net flows",
+    "maxDrawdown": "Max drawdown",
+    "volatility": "Volatility {{value}}",
+    "insufficientVol": "Insufficient history",
+    "trackingModes": "Tracking modes",
+    "txMode": "{{count}} tx-mode",
+    "snapshotMode": "{{count}} snapshot",
+    "annualized": "Annualized: {{value}}",
+    "periodReturn": "Period return",
+    "noBenchmark": "No benchmark",
+    "portfolioSeries": "Portfolio (Base 100)",
+    "benchmarkSeries": "Benchmark (Base 100)",
+    "chartTitle": "Base-100 performance (TWR)",
+    "chartDesc": "Time-weighted return neutralized for cashflows, compared against a benchmark index.",
+    "empty": "Record at least two valuation dates to display the performance curve."
+  },
+  "planning": {
+    "fireTitle": "Retirement & FIRE Simulator",
+    "fireDesc": "Estimate your financial independence target, FIRE age, and portfolio longevity.",
+    "realBalance": "Real balance (today’s euros)",
+    "nominalBalance": "Nominal balance",
+    "fields": {
+      "currentAge": "Current age",
+      "retirementAge": "Target retirement age",
+      "lifeExpectancy": "Life expectancy",
+      "currentSavings": "Current invested wealth (EUR)",
+      "monthlyContribution": "Monthly contribution (EUR)",
+      "expectedReturn": "Expected annual return (%)",
+      "inflation": "Inflation (%)",
+      "monthlySpend": "Monthly retirement spend (EUR)",
+      "swr": "Safe withdrawal rate (%)"
+    },
+    "kpi": {
+      "fiNumber": "FIRE number",
+      "fiAge": "Reached at age {{age}} (in {{years}} yrs)",
+      "fiNotReached": "Not reached within horizon",
+      "coastFire": "Coast FIRE number",
+      "fundedRatio": "Current funded ratio: {{pct}}",
+      "atRetirement": "Real wealth at retirement",
+      "sustainableMonthly": "Sustainable monthly draw",
+      "longevity": "Portfolio longevity",
+      "perpetual": "Sustained through horizon",
+      "depletedAt": "Depleted at age {{age}}"
+    },
+    "saveUpTitle": "Save-up goal simulator",
+    "saveUpDesc": "Calculate how long it takes to reach a target amount with compound returns.",
+    "saveUp": {
+      "target": "Target amount (EUR)",
+      "current": "Starting savings (EUR)",
+      "monthly": "Monthly contribution (EUR)",
+      "returnPct": "Annual return (%)",
+      "horizon": "Estimated time",
+      "monthsValue": "{{months}} months ({{years}} yrs)",
+      "unreachable": "Unreachable target",
+      "contributed": "Total contributed",
+      "growth": "Compound growth"
+    }
+  },
+  "portfolios": {
+    "title": "Virtual portfolios",
+    "description": "Group arbitrary accounts into custom views to track combined value and performance.",
+    "create": "New portfolio",
+    "empty": "No virtual portfolios yet. Create custom groupings (e.g. Retirement, Long-term Equities, Cash).",
+    "accountCount": "{{count}} account(s)",
+    "viewPerformance": "Performance",
+    "createTitle": "Create virtual portfolio",
+    "editTitle": "Edit virtual portfolio",
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "accounts": "Included accounts"
+    }
+  },
+  "assistant": {
+    "title": "Portfolio assistant",
+    "newChat": "New chat",
+    "newChatTitle": "Portfolio chat",
+    "conversations": "Conversations",
+    "noSessions": "No saved conversations yet.",
+    "welcomeTitle": "Ask your portfolio",
+    "welcomeDesc": "Uses the AI provider configured in Administration (local Ollama/LM Studio or your API key).",
+    "tryAsking": "Try asking:",
+    "inputPlaceholder": "Ask a question about your accounts, holdings, or spending...",
+    "send": "Send",
+    "suggestions": {
+      "summary": "Give me a concise overview of my net worth and asset allocation.",
+      "concentration": "What are my largest concentrations by account or holding?",
+      "feesAndCash": "How much cash do I hold relative to my investments?"
+    }
+  },
+  "budgetEvents": {
+    "title": "Spending events",
+    "description": "Group transactions belonging to a one-off project or trip (holidays, renovations).",
+    "create": "New event",
+    "emptyTitle": "No spending events",
+    "emptyDesc": "Create an event to track a dedicated budget across categories.",
+    "txCount": "{{count}} transaction(s)",
+    "createTitle": "Create spending event",
+    "editTitle": "Edit spending event",
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "budget": "Target budget (EUR)"
+    }
+  },
+  "budgetSplits": {
+    "title": "Split across categories",
+    "addLine": "Add split line",
+    "balanced": "Balanced",
+    "remaining": "Remaining: {{amount}}",
+    "saved": "Splits saved.",
+    "clear": "Clear splits"
+  },
+  "taxonomies": {
+    "title": "Custom taxonomies",
+    "description": "Define your own classification axes (risk, liquidity, tax wrapper) and assign holdings.",
+    "newPlaceholder": "Axis name (e.g. Liquidity, Risk tier)",
+    "create": "Create axis",
+    "classifiedTotal": "Classified value",
+    "addCategory": "New category",
+    "categoryPlaceholder": "e.g. Highly liquid",
+    "assignTicker": "Assign ticker",
+    "assign": "Assign"
+  },
+  "income": {
+    "totalYear": "Capital income ({{year}})",
+    "monthlyAvg": "Monthly average",
+    "yoyChange": "Year-over-year",
+    "currencies": "Currencies received",
+    "unconvertedNotice": "Currencies without EUR conversion: {{currencies}}.",
+    "chartTitle": "Monthly capital income",
+    "chartDesc": "Actual dividends, interest, and SCPI distributions received.",
+    "topPayers": "Top income sources",
+    "payments": "{{count}} payment(s)",
+    "kinds": {
+      "dividends": "Dividends",
+      "interest": "Interest",
+      "scpi": "SCPI"
+    }
+  },
+  "costBasis": {
+    "title": "Cost basis method & stock splits",
+    "description": "Select the accounting method for realized P&L and record stock split events.",
+    "methodLabel": "Cost basis accounting method",
+    "methods": {
+      "AVERAGE": "Weighted average",
+      "FIFO": "FIFO",
+      "LIFO": "LIFO",
+      "HIFO": "HIFO"
+    },
+    "splitsTitle": "Stock splits",
+    "addSplit": "Add split"
   }
 }

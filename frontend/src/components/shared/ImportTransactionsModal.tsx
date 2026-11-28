@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { extractErrorMessage } from '@/lib/errors'
-import { CircleNotch, UploadSimple, CheckCircle, WarningCircle } from '@phosphor-icons/react'
+import { CircleNotch, UploadSimple, CheckCircle, WarningCircle, Sparkle } from '@phosphor-icons/react'
+import { api } from '@/lib/api-client'
 import type {
   ColumnMappingDto,
   CsvDialectDto,
@@ -76,10 +77,31 @@ function ImportWizard({ accountId, onOpenChange }: { accountId: number; onOpenCh
   const [hasHeaderRow, setHasHeaderRow] = useState(true)
   const [feesIncluded, setFeesIncluded] = useState(false)
   const [invertSign, setInvertSign] = useState(false)
+  const [aiMappingLoading, setAiMappingLoading] = useState(false)
   const [result, setResult] = useState<TransactionImportResultResponse | null>(null)
 
   const previewMutation = usePreviewImport(accountId)
   const executeMutation = useExecuteImport(accountId)
+
+  async function handleAiSuggestMapping() {
+    if (!preview) return
+    setAiMappingLoading(true)
+    setError(null)
+    try {
+      const { data } = await api.post<{ suggestedMapping: ColumnMappingDto }>('/ai/csv/suggest-mapping', {
+        mode: preview.mode,
+        headers: preview.detectedColumns,
+        sampleRows: preview.sampleRows.slice(0, 5),
+      })
+      if (data?.suggestedMapping) {
+        setMapping((prev) => ({ ...(prev ?? {}), ...data.suggestedMapping }))
+      }
+    } catch (err) {
+      setError(extractErrorMessage(err, t('common.error')))
+    } finally {
+      setAiMappingLoading(false)
+    }
+  }
 
   async function handleFile(file: File) {
     setError(null)
@@ -245,7 +267,23 @@ function ImportWizard({ accountId, onOpenChange }: { accountId: number; onOpenCh
 
       {/* Column mapping */}
       <div>
-        <p className="mb-2 text-sm font-medium">{t('import.mapColumns')}</p>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">{t('import.mapColumns')}</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={aiMappingLoading}
+            onClick={() => void handleAiSuggestMapping()}
+          >
+            {aiMappingLoading ? (
+              <CircleNotch className="size-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Sparkle className="size-3.5" aria-hidden="true" />
+            )}
+            {t('import.aiSuggest')}
+          </Button>
+        </div>
         {mode === 'CASH' && <p className="mb-2 text-sm text-muted-foreground">{t('import.cashHint')}</p>}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {MAPPING_FIELDS[mode].map(({ key, optional }) => (

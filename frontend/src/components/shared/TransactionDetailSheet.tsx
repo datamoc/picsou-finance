@@ -6,6 +6,7 @@ import { ArrowDownLeft, Coins, PencilSimple, Trash } from '@phosphor-icons/react
 import type { Category, Transaction } from '@/types/api'
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay'
 import { MerchantAvatar } from '@/components/shared/MerchantAvatar'
+import { TransactionSplitEditor } from '@/components/shared/TransactionSplitEditor'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -219,6 +220,17 @@ export function TransactionDetailSheet({
             <Coins size={14} className=".5" />
             {t('peerLoan.linkedTransaction', { name: tx.peerLoanLink.accountName })}
           </Button>
+        </>
+      )}
+
+      {categories && categories.length > 0 && (
+        <>
+          <Separator />
+          <TransactionSplitEditor
+            transactionId={tx.id}
+            transactionAmount={tx.amount}
+            categories={categories}
+          />
         </>
       )}
 

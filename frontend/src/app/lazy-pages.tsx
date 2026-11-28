@@ -37,6 +37,15 @@ export const AccountDetailPage = lazy(() =>
 export const GoalsPage = lazy(() =>
   import('@/pages/goals/GoalsPage').then((m) => ({ default: m.GoalsPage }))
 )
+export const HealthPage = lazy(() =>
+  import('@/pages/health/HealthPage').then((m) => ({ default: m.HealthPage }))
+)
+export const AssistantPage = lazy(() =>
+  import('@/pages/assistant/AssistantPage').then((m) => ({ default: m.AssistantPage }))
+)
+export const EventsPage = lazy(() =>
+  import('@/pages/budget/EventsPage').then((m) => ({ default: m.EventsPage }))
+)
 export const GoalCalendarPage = lazy(() =>
   import('@/pages/goals/GoalCalendarPage').then((m) => ({ default: m.GoalCalendarPage }))
 )

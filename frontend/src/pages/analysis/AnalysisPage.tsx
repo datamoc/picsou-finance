@@ -12,12 +12,27 @@ import { useAllocationTargets, useDiversification, useWealthPyramid } from '@/fe
 import { PyramidSection } from './PyramidSection'
 import { DiversificationSection } from './DiversificationSection'
 import { ProjectionSection } from './ProjectionSection'
+import { PerformanceSection } from './PerformanceSection'
+import { RebalanceWorksheetSection } from './RebalanceWorksheetSection'
+import { RetirementSimulatorSection } from './RetirementSimulatorSection'
+import { VirtualPortfoliosSection } from './VirtualPortfoliosSection'
+import { CustomTaxonomiesSection } from './CustomTaxonomiesSection'
+import { IncomeSection } from './IncomeSection'
 import {
   AllocationTargetsModal,
   type AllocationTargetsFocusField,
 } from './AllocationTargetsModal'
 
-type AnalysisTab = 'pyramid' | 'diversification' | 'projection'
+type AnalysisTab =
+  | 'pyramid'
+  | 'diversification'
+  | 'performance'
+  | 'rebalance'
+  | 'projection'
+  | 'fire'
+  | 'income'
+  | 'portfolios'
+  | 'taxonomies'
 
 export function AnalysisPage() {
   const { t } = useTranslation()
@@ -29,6 +44,7 @@ export function AnalysisPage() {
     AllocationTargetsFocusField | undefined
   >(undefined)
   const [activeTab, setActiveTab] = useState<AnalysisTab>('pyramid')
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<number | null>(null)
 
   function openTargets(initialFocus?: AllocationTargetsFocusField) {
     setTargetsInitialFocus(initialFocus)
@@ -45,7 +61,13 @@ export function AnalysisPage() {
   const tabs: Array<{ id: AnalysisTab; label: string }> = [
     { id: 'pyramid', label: t('analysis.tabs.pyramid') },
     { id: 'diversification', label: t('analysis.tabs.diversification') },
+    { id: 'performance', label: t('analysis.tabs.performance') },
+    { id: 'rebalance', label: t('analysis.tabs.rebalance') },
     { id: 'projection', label: t('analysis.tabs.projection') },
+    { id: 'fire', label: t('analysis.tabs.fire') },
+    { id: 'income', label: t('analysis.tabs.income') },
+    { id: 'portfolios', label: t('analysis.tabs.portfolios') },
+    { id: 'taxonomies', label: t('analysis.tabs.taxonomies') },
   ]
 
   return (
@@ -133,7 +155,26 @@ export function AnalysisPage() {
             ) : null
           )}
 
+          {activeTab === 'performance' && <PerformanceSection portfolioId={selectedPortfolioId} />}
+
+          {activeTab === 'rebalance' && <RebalanceWorksheetSection />}
+
           {activeTab === 'projection' && <ProjectionSection />}
+
+          {activeTab === 'fire' && <RetirementSimulatorSection />}
+
+          {activeTab === 'income' && <IncomeSection />}
+
+          {activeTab === 'portfolios' && (
+            <VirtualPortfoliosSection
+              onInspectPerformance={(id) => {
+                setSelectedPortfolioId(id)
+                setActiveTab('performance')
+              }}
+            />
+          )}
+
+          {activeTab === 'taxonomies' && <CustomTaxonomiesSection />}
         </div>
       )}
 
