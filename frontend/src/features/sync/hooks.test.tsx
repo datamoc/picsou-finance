@@ -16,8 +16,9 @@ const cryptoExchangeApi = vi.hoisted(() => ({
   add: vi.fn(),
 }))
 
-const { amundiApi, corumApi, sofidyApi, boursoApi, caisseEpargneApi, banquePopulaireApi, fortuneoApi } = vi.hoisted(() => ({
+const { amundiApi, linxeaApi, corumApi, sofidyApi, boursoApi, caisseEpargneApi, banquePopulaireApi, fortuneoApi } = vi.hoisted(() => ({
   amundiApi: { getStatus: vi.fn() },
+  linxeaApi: { getStatus: vi.fn() },
   corumApi: { getStatus: vi.fn() },
   sofidyApi: { getStatus: vi.fn() },
   boursoApi: { getStatus: vi.fn() },
@@ -36,6 +37,7 @@ vi.mock("./api", () => ({
   caisseEpargneApi,
   banquePopulaireApi,
   bourseDirectApi,
+  linxeaApi,
   amundiApi,
   cmesApi: {},
   natixisApi: {},
@@ -191,6 +193,7 @@ describe("Crypto exchange hooks", () => {
 describe("completed sidecar syncs", () => {
   it.each([
     { name: "Bourse Direct", api: bourseDirectApi, id: "bourseDirect" as const },
+    { name: "Linxea", api: linxeaApi, id: "linxea" as const },
     { name: "Amundi", api: amundiApi, id: "amundi" as const },
     { name: "CORUM", api: corumApi, id: "corum" as const },
     { name: "Sofidy", api: sofidyApi, id: "sofidy" as const },

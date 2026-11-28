@@ -26,6 +26,7 @@ const BROKER_SOURCES: &[&str] = &[
     "trade-republic",
     "bourso",
     "bourse-direct",
+    "linxea",
     "amundi",
     "cmes",
     "corum",

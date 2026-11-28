@@ -22,6 +22,7 @@ pub async fn describe(state: &AppState, member_id: i64) -> String {
         ("trade-republic", SidecarBank::TradeRepublic),
         ("bourso", SidecarBank::Bourso),
         ("bourse-direct", SidecarBank::BourseDirect),
+        ("linxea", SidecarBank::Linxea),
         ("amundi", SidecarBank::Amundi),
         ("cmes", SidecarBank::Cmes),
         ("cic", SidecarBank::Cic),

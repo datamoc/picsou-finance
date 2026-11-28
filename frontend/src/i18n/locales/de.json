@@ -990,6 +990,7 @@
       "tr": "Trade Republic",
       "bourso": "Girokonten, Sparkonten, PEA und Wertpapierdepots bei BoursoBank",
       "bourseDirect": "PEA- und Wertpapierkonten synchronisieren",
+      "linxea": "Linxea-Verträge (PER, Lebensversicherung, PEA) synchronisieren",
       "degiro": "DEGIRO-Wertpapierkonto synchronisieren",
       "ibkr": "Synchronisieren Sie Ihr Interactive-Brokers-Konto per Flex Query",
       "simplefin": "Bankkonten mit einem SimpleFIN-Setup-Token importieren",
@@ -1656,6 +1657,44 @@
         "formatChanged": "Bourse Direct hat sein Portfolioformat geändert. Deine vorhandenen Daten wurden nicht verändert.",
         "invalidData": "Bourse Direct hat widersprüchliche Portfoliodaten geliefert. Deine vorhandenen Daten wurden nicht verändert.",
         "serverError": "Bourse Direct konnte nicht erreicht werden. Bitte erneut versuchen."
+      }
+    },
+    "linxea": {
+      "title": "Linxea",
+      "login": "E-Mail / Benutzername",
+      "password": "Passwort",
+      "otpCode": "6-stelliger Code per E-Mail",
+      "otpPrompt": "Gib den 6-stelligen Code ein, den Linxea gerade an deine E-Mail-Adresse geschickt hat.",
+      "connect": "Anmelden",
+      "connecting": "Anmeldung läuft…",
+      "validate": "Code bestätigen",
+      "validating": "Wird bestätigt…",
+      "sync": "Synchronisieren",
+      "queued": "Synchronisierung in Warteschlange…",
+      "syncing": "Synchronisierung läuft…",
+      "syncSuccess": "Verträge synchronisiert.",
+      "clearSession": "Trennen",
+      "noSession": "Keine aktive Sitzung",
+      "sessionActive": "Sitzung aktiv",
+      "scope": "Synchronisiert deine Linxea-Verträge (PER, Lebensversicherung, PEA): Träger, Anteile, Einstandspreis und Bewertung.",
+      "errors": {
+        "tooManyAttempts": "Zu viele Versuche. Bitte warten.",
+        "invalidCredentials": "Ungültige Linxea-E-Mail oder ungültiges Passwort.",
+        "invalidCode": "Ungültiger oder abgelaufener Code. Anmeldung erneut starten.",
+        "authAttemptExpired": "Der Anmeldeversuch ist abgelaufen. Anmeldung erneut starten.",
+        "sessionExpired": "Die Linxea-Sitzung ist abgelaufen. Bitte erneut verbinden.",
+        "portfolioIncomplete": "Linxea hat einen unvollständigen Vertrag geliefert. Deine vorhandenen Daten wurden nicht verändert.",
+        "formatChanged": "Linxea hat sein Exportformat geändert. Deine vorhandenen Daten wurden nicht verändert.",
+        "invalidData": "Linxea hat widersprüchliche Vertragsdaten geliefert. Deine vorhandenen Daten wurden nicht verändert.",
+        "serverError": "Linxea konnte nicht erreicht werden. Bitte erneut versuchen."
+      },
+      "webview": {
+        "hint": "Melde dich direkt im offiziellen Linxea-Kundenportal in einem eigenen Fenster an. Picsou sieht deine Zugangsdaten nie.",
+        "connect": "Bei Linxea anmelden",
+        "reconnect": "Linxea erneut verbinden",
+        "waiting": "Melde dich im gerade geöffneten Linxea-Fenster an…",
+        "waitingHint": "Gib deine E-Mail, ggf. dein Passwort und den per E-Mail gesendeten Bestätigungscode direkt auf der Linxea-Website ein. Das Fenster schließt sich danach automatisch.",
+        "fetching": "Angemeldet — Linxea-Verträge werden abgerufen…"
       }
     },
     "amundi": {

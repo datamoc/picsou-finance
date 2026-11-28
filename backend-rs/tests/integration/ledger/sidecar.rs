@@ -185,6 +185,7 @@ fn sync_exception_status_recognizes_only_exact_connector_authentication_codes() 
         ("lbp", SessionExpired),
         ("lbp", InvalidCredentials),
         ("bourse-direct", SessionExpired),
+        ("linxea", SessionExpired),
         ("amundi", SessionExpired),
         ("fortuneo", SessionExpired),
         ("amex", SessionExpired),
@@ -222,6 +223,7 @@ fn sync_exception_status_keeps_transient_unknown_and_non_auth_errors_failed() {
         "revolut",
         "bourso",
         "bourse-direct",
+        "linxea",
         "amundi",
         "fortuneo",
         "amex",
@@ -259,6 +261,7 @@ fn sync_exception_status_keeps_transient_unknown_and_non_auth_errors_failed() {
     for source in [
         "bourso",
         "bourse-direct",
+        "linxea",
         "amundi",
         "fortuneo",
         "amex",

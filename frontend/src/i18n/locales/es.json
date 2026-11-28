@@ -990,6 +990,7 @@
       "tr": "Trade Republic",
       "bourso": "Cuentas corrientes, ahorro, PEA y cuentas de valores en BoursoBank",
       "bourseDirect": "Sincronizar tus cuentas PEA y de valores",
+      "linxea": "Sincronizar tus contratos PER, seguro de vida y PEA de Linxea",
       "degiro": "Sincronizar tu cuenta de valores DEGIRO",
       "ibkr": "Sincroniza tu cuenta de Interactive Brokers mediante Flex Query",
       "simplefin": "Importa cuentas bancarias con un token de SimpleFIN",
@@ -1656,6 +1657,44 @@
         "formatChanged": "Bourse Direct cambió el formato de la cartera. Tus datos existentes no se modificaron.",
         "invalidData": "Bourse Direct devolvió datos de cartera incoherentes. Tus datos existentes no se modificaron.",
         "serverError": "No se pudo contactar con Bourse Direct. Inténtalo de nuevo."
+      }
+    },
+    "linxea": {
+      "title": "Linxea",
+      "login": "Correo / identificador",
+      "password": "Contraseña",
+      "otpCode": "Código de 6 dígitos recibido por correo",
+      "otpPrompt": "Introduce el código de 6 dígitos que Linxea acaba de enviar a tu correo.",
+      "connect": "Conectarse",
+      "connecting": "Conectando…",
+      "validate": "Validar el código",
+      "validating": "Validando…",
+      "sync": "Sincronizar",
+      "queued": "Sincronización en cola…",
+      "syncing": "Sincronizando…",
+      "syncSuccess": "Contratos sincronizados.",
+      "clearSession": "Desconectar",
+      "noSession": "Ninguna sesión activa",
+      "sessionActive": "Sesión activa",
+      "scope": "Sincroniza tus contratos PER, seguro de vida y PEA de Linxea: soportes, participaciones, precio de coste y valoración.",
+      "errors": {
+        "tooManyAttempts": "Demasiados intentos. Espera un momento.",
+        "invalidCredentials": "Correo o contraseña de Linxea no válidos.",
+        "invalidCode": "Código no válido o caducado. Reinicia el acceso.",
+        "authAttemptExpired": "El intento de autenticación ha caducado. Reinicia el acceso.",
+        "sessionExpired": "La sesión de Linxea ha caducado. Vuelve a conectarte.",
+        "portfolioIncomplete": "Linxea devolvió un contrato incompleto. Tus datos existentes no se modificaron.",
+        "formatChanged": "Linxea cambió el formato de la exportación. Tus datos existentes no se modificaron.",
+        "invalidData": "Linxea devolvió datos de contrato incoherentes. Tus datos existentes no se modificaron.",
+        "serverError": "No se pudo contactar con Linxea. Inténtalo de nuevo."
+      },
+      "webview": {
+        "hint": "Inicia sesión directamente en el portal oficial de Linxea en una ventana dedicada. Picsou nunca ve tus credenciales.",
+        "connect": "Iniciar sesión en Linxea",
+        "reconnect": "Reconectar Linxea",
+        "waiting": "Inicia sesión en la ventana de Linxea que se acaba de abrir…",
+        "waitingHint": "Introduce tu correo, contraseña si se solicita y el código enviado por correo directamente en el sitio de Linxea. La ventana se cerrará automáticamente al terminar.",
+        "fetching": "Conectado — obteniendo tus contratos de Linxea…"
       }
     },
     "amundi": {

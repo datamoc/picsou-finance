@@ -22,6 +22,9 @@ const V4_ACCOUNT_TRACKED_ISIN: &str = include_str!("migrations/V4__account_track
 
 const V5_REQUISITION_ERROR_CODE: &str = include_str!("migrations/V5__requisition_error_code.sql");
 
+const V6_LINXEA_SIDECAR_SESSION: &str =
+    include_str!("migrations/V6__linxea_sidecar_session.sql");
+
 /// Metadata table tracking applied SQLite schema migrations.
 pub const HISTORY_TABLE: &str = "picsou_sqlite_migrations";
 
@@ -121,6 +124,13 @@ pub fn migrations() -> Vec<SqliteMigration> {
             sql: V5_REQUISITION_ERROR_CODE,
             checksum: sha256_checksum(V5_REQUISITION_ERROR_CODE),
             mode: MigrationMode::Transactional,
+        },
+        SqliteMigration {
+            version: "6",
+            description: "linxea sidecar session",
+            sql: V6_LINXEA_SIDECAR_SESSION,
+            checksum: sha256_checksum(V6_LINXEA_SIDECAR_SESSION),
+            mode: MigrationMode::TableRebuild,
         },
     ]
 }

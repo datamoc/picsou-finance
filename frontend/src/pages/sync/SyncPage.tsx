@@ -36,6 +36,7 @@ import {
   HomeBankLogo,
   IbkrLogo,
   LaBanquePostaleLogo,
+  LinxeaLogo,
   NatixisLogo,
   RevolutLogo,
   SimplefinLogo,
@@ -54,6 +55,7 @@ import { WiseTab } from './WiseTab'
 import { FinaryTab } from './FinaryTab'
 import { HomeBankTab } from './HomeBankTab'
 import { BourseDirectTab } from './BourseDirectTab'
+import { LinxeaTab } from './LinxeaTab'
 import { AccountsVisibilityTab } from './AccountsVisibilityTab'
 import { DegiroTab } from './DegiroTab'
 import { AmundiTab } from './AmundiTab'
@@ -99,6 +101,7 @@ const CONNECTORS: ConnectorDef[] = [
 
   { id: 'tr', category: 'investing', labelKey: 'sync.tr.title', icon: TradeRepublicLogo, keywords: 'trade republic etf' },
   { id: 'bourse-direct', category: 'investing', labelKey: 'sync.bourseDirect.title', icon: BourseDirectLogo, keywords: 'bourse direct pea cto' },
+  { id: 'linxea', category: 'investing', labelKey: 'sync.linxea.title', icon: LinxeaLogo, keywords: 'linxea assurance vie per spirit avenir' },
   { id: 'degiro', category: 'investing', labelKey: 'sync.degiro.title', icon: DegiroLogo, keywords: 'degiro courtier' },
   { id: 'ibkr', category: 'investing', labelKey: 'sync.ibkr.title', icon: IbkrLogo, keywords: 'interactive brokers flex' },
   { id: 'amundi', category: 'investing', labelKey: 'sync.amundi.title', icon: AmundiLogo, keywords: 'amundi epargne salariale pee per' },
@@ -184,6 +187,7 @@ export function SyncPage() {
       case 'lbp': return <LbpTab />
       case 'bnp': return <BnpTab />
       case 'bourse-direct': return <BourseDirectTab />
+      case 'linxea': return <LinxeaTab />
       case 'degiro': return <DegiroTab />
       case 'ibkr': return <IbkrTab />
       case 'simplefin': return <SimplefinTab />

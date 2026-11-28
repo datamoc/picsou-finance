@@ -8,6 +8,7 @@ banque-populaire-auth	BANQUE_POPULAIRE_AUTH_URL	http://banque-populaire-auth:800
 lbp-auth	LBP_AUTH_URL	http://lbp-auth:8001	http://127.0.0.1:8015
 revolut-auth	REVOLUT_AUTH_URL	http://revolut-auth:8002	http://127.0.0.1:8010
 bourse-direct-auth	BOURSE_DIRECT_AUTH_URL	http://bourse-direct-auth:8001	http://127.0.0.1:8002
+linxea-auth	LINXEA_AUTH_URL	http://linxea-auth:8001	http://127.0.0.1:8018
 degiro-auth	DEGIRO_AUTH_URL	http://degiro-auth:8001	http://127.0.0.1:8011
 amundi-auth	AMUNDI_AUTH_URL	http://amundi-auth:8001	http://127.0.0.1:8003
 cmes-auth	CMES_AUTH_URL	http://cmes-auth:8001	http://127.0.0.1:8009

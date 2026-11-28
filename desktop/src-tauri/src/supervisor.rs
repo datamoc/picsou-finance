@@ -319,6 +319,7 @@ pub fn start(
             .map_err(|e| format!("webview bank bridge: {e}"))?;
         let bridge_url = bridge.url().to_owned();
         let amex_url = bridge.amex_url();
+        let linxea_url = bridge.linxea_url();
         let revolut_url = bridge.revolut_url();
         {
             let mut s = stack.lock().unwrap_or_else(|e| e.into_inner());
@@ -331,6 +332,7 @@ pub fn start(
         }
         env.push(("BNP_AUTH_URL".to_owned(), bridge_url));
         env.push(("AMEX_AUTH_URL".to_owned(), amex_url));
+        env.push(("LINXEA_AUTH_URL".to_owned(), linxea_url));
         env.push(("REVOLUT_AUTH_URL".to_owned(), revolut_url));
         env.push(("APP_SIDECAR_API_KEY".to_owned(), sidecar_key.clone()));
     }

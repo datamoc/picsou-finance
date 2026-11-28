@@ -1529,6 +1529,21 @@ export type BourseDirectErrorCode =
 
 export type BourseDirectAuthInitResponse = SidecarAuthInitResponse
 
+export type LinxeaSessionStatus = SidecarSessionStatusOf<LinxeaErrorCode, SessionExpiry>
+
+export type LinxeaErrorCode =
+  | 'INVALID_CREDENTIALS'
+  | 'INVALID_OTP'
+  | 'AUTH_ATTEMPT_EXPIRED'
+  | 'SESSION_EXPIRED'
+  | 'PORTFOLIO_INCOMPLETE'
+  | 'UPSTREAM_FORMAT_CHANGED'
+  | 'UPSTREAM_UNAVAILABLE'
+  | 'INVALID_DATA'
+  | 'INTERNAL_ERROR'
+
+export type LinxeaAuthInitResponse = SidecarAuthInitResponse
+
 export type FortuneoSessionStatus = SidecarSessionStatusOf<FortuneoErrorCode, SessionExpiry>
 
 export type FortuneoErrorCode =

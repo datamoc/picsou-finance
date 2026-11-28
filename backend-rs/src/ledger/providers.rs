@@ -4,6 +4,7 @@
 use super::model::{Account, AccountType};
 
 pub const BOURSE_DIRECT: &str = "Bourse Direct";
+pub const LINXEA: &str = "Linxea";
 pub const AMUNDI: &str = "Amundi Épargne Salariale";
 pub const CMES: &str = "Crédit Mutuel Épargne Salariale";
 pub const NATIXIS: &str = "Natixis Interépargne";
@@ -22,6 +23,7 @@ pub const BANQUE_POPULAIRE_ID_PREFIX: &str = "bp_";
 /// would understate them, so their own total wins when a line cannot be priced.
 pub const PROVIDER_VALUED: &[&str] = &[
     BOURSE_DIRECT,
+    LINXEA,
     AMUNDI,
     CMES,
     NATIXIS,
@@ -39,13 +41,20 @@ pub const NEVER_MARKET_PRICED: &[&str] = &[NATIXIS, CMES];
 /// The fund codes the Natixis and CMES syncs store as tickers (their `fund_code_prefix`).
 pub const NATIXIS_FUND_CODE_PREFIX: &str = "NATIXIS-";
 pub const CMES_FUND_CODE_PREFIX: &str = "CMES-";
+/// Linxea exports a non-unitised support (a fonds euro) under its own pseudo-code
+/// (`FONDSPERNG`), which no market quotes.
+pub const LINXEA_FUND_CODE_PREFIX: &str = "LINXEA_";
 
 /// A Natixis or CMES fund code: no market quotes it, so neither Yahoo (prices, history,
 /// dividends) nor Nasdaq is asked for one.
 pub fn is_fund_code(ticker: &str) -> bool {
     let upper = ticker.trim().to_uppercase();
-    [NATIXIS_FUND_CODE_PREFIX, CMES_FUND_CODE_PREFIX]
-        .iter()
+    [
+        NATIXIS_FUND_CODE_PREFIX,
+        CMES_FUND_CODE_PREFIX,
+        LINXEA_FUND_CODE_PREFIX,
+    ]
+    .iter()
         .any(|prefix| upper.starts_with(prefix))
 }
 

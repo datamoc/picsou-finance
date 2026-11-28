@@ -72,6 +72,8 @@ pub mod policies {
         REVOLUT_AUTH = "revolutAuthBuckets": [5 / 15];
         REVOLUT_WEBVIEW = "revolutWebviewBuckets": [10 / 15];
         BOURSE_DIRECT_AUTH = "bourseDirectAuthBuckets": [5 / 15];
+        LINXEA_AUTH = "linxeaAuthBuckets": [5 / 15];
+        LINXEA_WEBVIEW = "linxeaWebviewBuckets": [10 / 15];
         DEGIRO_AUTH = "degiroAuthBuckets": [5 / 15];
         AMUNDI_AUTH = "amundiAuthBuckets": [5 / 15];
         CIC_AUTH = "cicAuthBuckets": [5 / 15];

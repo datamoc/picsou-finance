@@ -22,6 +22,7 @@ pub const CANONICAL_ORDER: &[&str] = &[
     "trade-republic",
     "bourso",
     "bourse-direct",
+    "linxea",
     "amundi",
     "fortuneo",
     "amex",

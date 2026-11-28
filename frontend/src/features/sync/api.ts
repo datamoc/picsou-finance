@@ -48,6 +48,8 @@ import type {
   SyncProgress,
   BourseDirectSessionStatus,
   BourseDirectAuthInitResponse,
+  LinxeaSessionStatus,
+  LinxeaAuthInitResponse,
   DegiroSessionStatus,
   DegiroAuthInitResponse,
   AmundiSessionStatus,
@@ -508,6 +510,31 @@ export type SidecarApi<TStatus, TInit> = ReturnType<typeof sidecarApi<TStatus, T
 // --- Bourse Direct ---
 
 export const bourseDirectApi = sidecarApi<BourseDirectSessionStatus, BourseDirectAuthInitResponse>('/bourse-direct')
+
+// --- Linxea (native Desktop WebView or e-mail + password + 6-digit e-mail code) ---
+
+export const linxeaApi = {
+  ...sidecarApi<LinxeaSessionStatus, LinxeaAuthInitResponse>('/linxea'),
+
+  /** Opens an interactive OS WebView login on Picsou Desktop (zero Docker, zero Python). */
+  startWebview: () =>
+    api
+      .post<{ processId: string; status: string }>('/linxea/webview/start')
+      .then(r => r.data),
+
+  getWebviewStatus: (processId: string) =>
+    api
+      .get<{ status: string; errorCode?: string; session?: LinxeaSessionStatus }>(
+        `/linxea/webview/status/${encodeURIComponent(processId)}`,
+        { skipGlobalErrorRedirect: true },
+      )
+      .then(r => r.data),
+
+  cancelWebview: (processId: string) =>
+    api
+      .post<{ cancelled: boolean }>(`/linxea/webview/cancel/${encodeURIComponent(processId)}`)
+      .then(r => r.data),
+}
 
 // --- Amundi Épargne Salariale (`code` is omitted for an app push: the user approves on their phone) ---
 

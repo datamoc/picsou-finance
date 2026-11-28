@@ -23,6 +23,7 @@ export const BANK_CONNECTOR_IDS = [
   'degiro',
   'fortuneo',
   'lbp',
+  'linxea',
   'natixis',
   'revolut',
   'sofidy',
@@ -47,6 +48,7 @@ export const SIDECAR_PROVIDER_TO_CONNECTOR_ID: Record<SidecarProviderId, BankCon
   corum: 'corum',
   fortuneo: 'fortuneo',
   lbp: 'lbp',
+  linxea: 'linxea',
   natixis: 'natixis',
   sofidy: 'sofidy',
 }

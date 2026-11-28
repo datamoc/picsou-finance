@@ -134,6 +134,7 @@ pub enum ConnectionKind {
     Cic,
     TradeRepublic,
     BourseDirect,
+    Linxea,
     Bourso,
     Fortuneo,
     Ibkr,

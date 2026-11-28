@@ -16,6 +16,7 @@ mod corum;
 mod degiro;
 mod fortuneo;
 mod lbp;
+mod linxea;
 mod natixis;
 mod revolut;
 mod sidecar;

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Linxea connector.** Synchronize Linxea PER, life-insurance (*assurance vie*), and PEA contracts
+  (supports, euro funds, units, average buy-in, P&L, and EUR valuation) natively on Picsou Desktop
+  via an embedded OS WebView login (`WebView2` / `WKWebView` / `WebKitGTK`) and pure-Rust XLSX
+  export parser (zero Docker, zero Python).
 - **Explainable and actionable unclassified diversification amounts.** In Analysis → Diversification,
   the overall "unclassified" badge and each dimension's (Sectors, Regions) unclassified badge are
   now buttons that open a breakdown dialog listing every contributing position (including funds

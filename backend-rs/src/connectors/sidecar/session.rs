@@ -284,6 +284,7 @@ impl SidecarSession {
             SidecarBank::Amex
             | SidecarBank::Amundi
             | SidecarBank::BourseDirect
+            | SidecarBank::Linxea
             | SidecarBank::Bourso
             | SidecarBank::Fortuneo
             | SidecarBank::Sofidy => error == SessionExpired,

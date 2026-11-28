@@ -1297,6 +1297,7 @@
       "revolut": "Phone + passcode, on-demand sync",
       "bourso": "Current accounts, savings, PEA and securities accounts held at BoursoBank",
       "bourseDirect": "Sync your PEA and securities accounts",
+      "linxea": "Sync your Linxea PER, life-insurance and PEA contracts",
       "degiro": "Sync your DEGIRO securities account",
       "ibkr": "Sync your Interactive Brokers account via Flex Query",
       "simplefin": "Import bank accounts with a SimpleFIN setup token",
@@ -2005,6 +2006,44 @@
         "formatChanged": "Bourse Direct changed its portfolio format. Your existing data was kept unchanged.",
         "invalidData": "Bourse Direct returned inconsistent portfolio data. Your existing data was kept unchanged.",
         "serverError": "Could not reach Bourse Direct. Please try again."
+      }
+    },
+    "linxea": {
+      "title": "Linxea",
+      "login": "E-mail / username",
+      "password": "Password",
+      "otpCode": "6-digit code sent by e-mail",
+      "otpPrompt": "Enter the 6-digit code Linxea just sent to your e-mail address.",
+      "connect": "Sign in",
+      "connecting": "Signing in…",
+      "validate": "Validate the code",
+      "validating": "Validating…",
+      "sync": "Sync",
+      "queued": "Sync queued…",
+      "syncing": "Syncing…",
+      "syncSuccess": "Contracts synced.",
+      "clearSession": "Disconnect",
+      "noSession": "No active session",
+      "sessionActive": "Session active",
+      "scope": "Syncs your Linxea PER, life-insurance and PEA contracts: supports, units, cost basis and valuation.",
+      "errors": {
+        "tooManyAttempts": "Too many attempts. Please wait.",
+        "invalidCredentials": "Invalid Linxea e-mail or password.",
+        "invalidCode": "Invalid or expired code. Start the login again.",
+        "authAttemptExpired": "The authentication attempt expired. Start the login again.",
+        "sessionExpired": "The Linxea session expired. Please reconnect.",
+        "portfolioIncomplete": "Linxea returned an incomplete contract. Your existing data was kept unchanged.",
+        "formatChanged": "Linxea changed its export format. Your existing data was kept unchanged.",
+        "invalidData": "Linxea returned inconsistent contract data. Your existing data was kept unchanged.",
+        "serverError": "Could not reach Linxea. Please try again."
+      },
+      "webview": {
+        "hint": "Sign in directly on the official Linxea client portal in a dedicated window. Picsou never sees your credentials.",
+        "connect": "Sign in to Linxea",
+        "reconnect": "Reconnect Linxea",
+        "waiting": "Sign in using the Linxea window that just opened…",
+        "waitingHint": "Enter your e-mail, password if asked, and the verification code sent by e-mail directly on Linxea’s site. The window closes automatically once signed in.",
+        "fetching": "Signed in — fetching your Linxea contracts…"
       }
     },
     "amundi": {

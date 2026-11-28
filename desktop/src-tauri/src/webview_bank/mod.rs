@@ -8,6 +8,7 @@ pub mod amex;
 pub mod amex_parsers;
 pub mod bnp;
 pub mod bnp_parsers;
+pub mod linxea;
 pub mod revolut;
 pub mod revolut_parsers;
 
@@ -30,10 +31,11 @@ use tokio::sync::oneshot;
 use crate::supervisor::LOOPBACK;
 use amex::AmexWebviewManager;
 use bnp::{ApiError, BnpWebviewManager};
+use linxea::LinxeaWebviewManager;
 use revolut::RevolutWebviewManager;
 
 /// Sidecar services natively served by this WebView bridge on Desktop (removed from unavailable).
-pub const PROVIDED_SERVICES: &[&str] = &["bnp-auth", "amex-auth", "revolut-auth"];
+pub const PROVIDED_SERVICES: &[&str] = &["bnp-auth", "amex-auth", "revolut-auth", "linxea-auth"];
 
 const API_KEY_HEADER: &str = "X-Picsou-Sidecar-Key";
 const AUTH_CHALLENGE: &str = "Picsou-Sidecar-Key";
@@ -43,6 +45,7 @@ struct BridgeState {
     api_key: String,
     bnp: Arc<BnpWebviewManager>,
     amex: Arc<AmexWebviewManager>,
+    linxea: Arc<LinxeaWebviewManager>,
     revolut: Arc<RevolutWebviewManager>,
 }
 
@@ -53,6 +56,7 @@ pub struct WebviewBridge {
     app: AppHandle,
     bnp: Arc<BnpWebviewManager>,
     amex: Arc<AmexWebviewManager>,
+    linxea: Arc<LinxeaWebviewManager>,
     revolut: Arc<RevolutWebviewManager>,
     shutdown: Option<oneshot::Sender<()>>,
 }
@@ -66,6 +70,10 @@ impl WebviewBridge {
         format!("{}/amex", self.url)
     }
 
+    pub fn linxea_url(&self) -> String {
+        format!("{}/linxea", self.url)
+    }
+
     pub fn revolut_url(&self) -> String {
         format!("{}/revolut", self.url)
     }
@@ -73,6 +81,7 @@ impl WebviewBridge {
     pub fn stop(&mut self) {
         self.bnp.close_all(&self.app);
         self.amex.close_all(&self.app);
+        self.linxea.close_all(&self.app);
         self.revolut.close_all(&self.app);
         if let Some(tx) = self.shutdown.take() {
             let _ = tx.send(());
@@ -88,12 +97,14 @@ pub fn start(app: AppHandle, api_key: String) -> io::Result<WebviewBridge> {
 
     let bnp = Arc::new(BnpWebviewManager::new());
     let amex = Arc::new(AmexWebviewManager::new());
+    let linxea = Arc::new(LinxeaWebviewManager::new());
     let revolut = Arc::new(RevolutWebviewManager::new());
     let state = Arc::new(BridgeState {
         app: app.clone(),
         api_key,
         bnp: Arc::clone(&bnp),
         amex: Arc::clone(&amex),
+        linxea: Arc::clone(&linxea),
         revolut: Arc::clone(&revolut),
     });
 
@@ -131,6 +142,7 @@ pub fn start(app: AppHandle, api_key: String) -> io::Result<WebviewBridge> {
         app,
         bnp,
         amex,
+        linxea,
         revolut,
         shutdown: Some(shutdown_tx),
     })
@@ -156,6 +168,18 @@ fn build_router(state: Arc<BridgeState>) -> axum::Router {
             post(amex_webview_cancel),
         )
         .route("/amex/accounts", post(amex_accounts))
+        // Linxea
+        .route("/linxea/health", get(health))
+        .route("/linxea/webview/start", post(linxea_webview_start))
+        .route(
+            "/linxea/webview/status/{process_id}",
+            get(linxea_webview_status),
+        )
+        .route(
+            "/linxea/webview/cancel/{process_id}",
+            post(linxea_webview_cancel),
+        )
+        .route("/linxea/accounts", post(linxea_accounts))
         // Revolut
         .route("/revolut/health", get(health))
         .route("/revolut/webview/start", post(revolut_webview_start))
@@ -612,6 +636,67 @@ async fn amex_accounts(
         return unauthorized_response();
     }
     match state.amex.accounts(&body.session_state, body.history).await {
+        Ok(reply) => (StatusCode::OK, Json(reply)).into_response(),
+        Err(err) => error_response(err),
+    }
+}
+
+// ─── Linxea routes ───────────────────────────────────────────────────────────
+
+async fn linxea_webview_start(
+    State(state): State<Arc<BridgeState>>,
+    headers: HeaderMap,
+) -> Response {
+    if !sidecar_key_valid(&headers, &state.api_key) {
+        return unauthorized_response();
+    }
+    match state.linxea.start_login(state.app.clone()).await {
+        Ok(reply) => (StatusCode::OK, Json(reply)).into_response(),
+        Err(err) => error_response(err),
+    }
+}
+
+async fn linxea_webview_status(
+    State(state): State<Arc<BridgeState>>,
+    headers: HeaderMap,
+    Path(process_id): Path<String>,
+) -> Response {
+    if !sidecar_key_valid(&headers, &state.api_key) {
+        return unauthorized_response();
+    }
+    match state.linxea.get_status(&process_id) {
+        Ok(reply) => (StatusCode::OK, Json(reply)).into_response(),
+        Err(err) => error_response(err),
+    }
+}
+
+async fn linxea_webview_cancel(
+    State(state): State<Arc<BridgeState>>,
+    headers: HeaderMap,
+    Path(process_id): Path<String>,
+) -> Response {
+    if !sidecar_key_valid(&headers, &state.api_key) {
+        return unauthorized_response();
+    }
+    let cancelled = state.linxea.cancel(&state.app, &process_id);
+    (StatusCode::OK, Json(json!({ "cancelled": cancelled }))).into_response()
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LinxeaAccountsRequest {
+    session_state: String,
+}
+
+async fn linxea_accounts(
+    State(state): State<Arc<BridgeState>>,
+    headers: HeaderMap,
+    Json(body): Json<LinxeaAccountsRequest>,
+) -> Response {
+    if !sidecar_key_valid(&headers, &state.api_key) {
+        return unauthorized_response();
+    }
+    match state.linxea.accounts(&body.session_state).await {
         Ok(reply) => (StatusCode::OK, Json(reply)).into_response(),
         Err(err) => error_response(err),
     }
