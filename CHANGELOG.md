@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (supports, euro funds, units, average buy-in, P&L, and EUR valuation) natively on Picsou Desktop
   via an embedded OS WebView login (`WebView2` / `WKWebView` / `WebKitGTK`) and pure-Rust XLSX
   export parser (zero Docker, zero Python).
+- **Natixis Interépargne: sign in with a passkey (Picsou Desktop for Windows and Linux).** Type
+  your e-mail, then confirm with Windows Hello or your security key on Windows, or with a USB
+  security key and its PIN on Linux: no password and no code. Picsou uses a passkey you already
+  have, never creates one, and keeps the same session as a password login. Docker and Helm
+  installs keep the password login.
 - **Explainable and actionable unclassified diversification amounts.** In Analysis → Diversification,
   the overall "unclassified" badge and each dimension's (Sectors, Regions) unclassified badge are
   now buttons that open a breakdown dialog listing every contributing position (including funds
@@ -52,6 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Natixis Interépargne: reconnecting shows deleted accounts again.** After a Natixis account
+  was deleted, a new sign-in reported a successful sync but showed nothing for it. Signing in
+  again now restores the deleted plans; a routine sync still leaves them deleted.
 - **Crédit Mutuel Épargne Salariale and Natixis fund codes are no longer sent to Yahoo Finance.**
   The holdings page still asked live prices for their `CMES-` and `NATIXIS-` codes, and the weekly
   dividend pass asked their dividends, which only got a 404 each time. Neither asks for them now.

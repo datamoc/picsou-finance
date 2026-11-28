@@ -26,8 +26,9 @@ const NO_SESSION = {
   lastSyncStartedAt: null, lastSyncCompletedAt: null,
 }
 
+/** A connector failure as the backend answers it: a 422 carrying the code. */
 function apiError(code: string) {
-  return Object.assign(new Error(code), { response: { status: 400, data: { code } } })
+  return Object.assign(new Error(code), { response: { status: 422, data: { code } } })
 }
 
 function renderPanel() {
@@ -94,6 +95,57 @@ describe('NatixisPanel', () => {
 
     const running = await screen.findByRole('button', { name: 'sync.natixis.syncing' })
     expect(running).toBeDisabled()
+  })
+
+  /** A browser or Docker install has no operating system prompt to offer. */
+  it('offers no passkey sign-in unless the install can show the prompt', async () => {
+    apiGet.mockImplementation((url: string) =>
+      Promise.resolve({ data: url === '/natixis/auth/passkey' ? { available: false } : NO_SESSION }))
+    renderPanel()
+
+    await screen.findByLabelText('sync.natixis.login')
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/natixis/auth/passkey'))
+    expect(screen.queryByRole('button', { name: 'sync.natixis.passkey.connect' })).not.toBeInTheDocument()
+  })
+
+  it('signs in with a passkey from the e-mail alone', async () => {
+    let status = NO_SESSION
+    apiGet.mockImplementation((url: string) =>
+      Promise.resolve({ data: url === '/natixis/auth/passkey' ? { available: true } : status }))
+    apiPost.mockImplementation(() => {
+      status = { ...NO_SESSION, isActive: true, syncStatus: 'QUEUED' }
+      return Promise.resolve({ data: status })
+    })
+    renderPanel()
+
+    const button = await screen.findByRole('button', { name: 'sync.natixis.passkey.connect' })
+    expect(button).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('sync.natixis.login'), { target: { value: ' saver@example.org ' } })
+    fireEvent.click(button)
+
+    await screen.findByRole('button', { name: 'sync.natixis.syncing' })
+    expect(apiPost).toHaveBeenCalledExactlyOnceWith('/natixis/auth/passkey', { email: 'saver@example.org' })
+  })
+
+  it.each([
+    ['AUTH_ATTEMPT_EXPIRED', 'passkeyNotConfirmed'],
+    ['MFA_TYPE_UNSUPPORTED', 'passkeyNotOffered'],
+    ['INVALID_CREDENTIALS', 'passkeyRefused'],
+    ['INTERNAL_ERROR', 'passkeyFailed'],
+    ['UPSTREAM_FORMAT_CHANGED', 'formatChanged'],
+  ])('explains %s after a passkey sign-in', async (code, message) => {
+    apiGet.mockImplementation((url: string) =>
+      Promise.resolve({ data: url === '/natixis/auth/passkey' ? { available: true } : NO_SESSION }))
+    apiPost.mockRejectedValue(apiError(code))
+    renderPanel()
+
+    const button = await screen.findByRole('button', { name: 'sync.natixis.passkey.connect' })
+    fireEvent.change(screen.getByLabelText('sync.natixis.login'), { target: { value: 'saver@example.org' } })
+    fireEvent.click(button)
+
+    expect(await screen.findByText(`sync.natixis.errors.${message}`)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'sync.reportProblem.action' }))
+    expect(screen.getByTestId('connector-report-title')).toHaveTextContent(`natixis (${code})`)
   })
 
   it('drops the attempt on any other second-factor error', async () => {

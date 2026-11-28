@@ -10,6 +10,7 @@ import {
   ArrowsClockwise,
   ShieldCheck,
   DeviceMobile,
+  Fingerprint,
   type Icon as LucideIcon,
 } from '@phosphor-icons/react'
 import { useTranslation } from "react-i18next"
@@ -99,6 +100,19 @@ const ERROR_MESSAGE_SUFFIXES: Record<string, string> = {
 }
 
 /**
+ * What a code means when a passkey sign-in raised it: the same code reads differently after a
+ * password login. Other codes keep their usual message.
+ */
+const PASSKEY_ERROR_MESSAGE_SUFFIXES: Record<string, string> = {
+  INVALID_CREDENTIALS: "passkeyRefused",
+  MFA_TYPE_UNSUPPORTED: "passkeyNotOffered",
+  /** The prompt was closed, timed out, or another one was already open. */
+  AUTH_ATTEMPT_EXPIRED: "passkeyNotConfirmed",
+  /** The desktop shell or its answer failed: the bank had no part in it. */
+  INTERNAL_ERROR: "passkeyFailed",
+}
+
+/**
  * How long the panel keeps polling the session once a mobile confirmation's
  * completion request is lost: the backend's own confirmation window (120 s)
  * plus the time to import.
@@ -164,6 +178,11 @@ export interface SidecarSessionPanelProps {
    * advertises `status.webviewLoginSupported === true`.
    */
   webview?: SidecarWebviewActions
+  /**
+   * Signs in with a passkey through the operating system's own prompt, using the login typed in
+   * the form. Passed only when the install can show that prompt.
+   */
+  passkey?: { connect: (login: string) => Promise<unknown> }
 }
 
 /**
@@ -187,6 +206,7 @@ export function SidecarSessionPanel({
   recoveryAction,
   successSummary,
   webview,
+  passkey,
 }: SidecarSessionPanelProps) {
   const { t } = useTranslation()
   const [authState, setAuthState] = useState<AuthState>("IDLE")
@@ -197,6 +217,7 @@ export function SidecarSessionPanel({
   const [remember, setRemember] = useState(false)
   const [processId, setProcessId] = useState<string | null>(null)
   const [webviewProcessId, setWebviewProcessId] = useState<string | null>(null)
+  const [passkeyPending, setPasskeyPending] = useState(false)
   const [error, setErrorState] = useState<string | null>(null)
   const [errorCode, setErrorCode] = useState<string | null>(null)
   const setError = useCallback((message: string | null, code?: string | null) => {
@@ -409,6 +430,27 @@ export function SidecarSessionPanel({
       clearInterval(timer)
     }
   }, [authState, refetchStatus, setError, t, translationPrefix, webview, webviewProcessId])
+
+  const startPasskeyLogin = async () => {
+    if (!passkey || passkeyPending) return
+    notifyConnectedOnSuccess.current = false
+    setError(null)
+    setPasskeyPending(true)
+    try {
+      await passkey.connect(login.trim())
+      notifyConnectedOnSuccess.current = true
+      setLogin("")
+      setPassword("")
+      await refetchStatus()
+    } catch (value) {
+      const code = getErrorCode(value)
+      const suffix = code ? PASSKEY_ERROR_MESSAGE_SUFFIXES[code] : undefined
+      setError(suffix ? t(key(`errors.${suffix}`)) : formatError(value), extractTypedErrorCode(value))
+      setAuthState("ERROR")
+    } finally {
+      setPasskeyPending(false)
+    }
+  }
 
   const startWebviewLogin = async () => {
     if (!webview || webviewSubmitting.current) return
@@ -731,12 +773,30 @@ export function SidecarSessionPanel({
                   <span className="text-sm text-muted-foreground">{t(key("remember"))}</span>
                 </label>
               )}
-              <Button type="submit" disabled={initiate.isPending}>
-                {initiate.isPending && <ArrowsClockwise className="animate-spin" />}
-                {initiate.isPending
-                  ? t(key("connecting"))
-                  : t(key("connect"))}
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button type="submit" disabled={initiate.isPending || passkeyPending}>
+                  {initiate.isPending && <ArrowsClockwise className="animate-spin" />}
+                  {initiate.isPending
+                    ? t(key("connecting"))
+                    : t(key("connect"))}
+                </Button>
+                {passkey && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!login.trim() || passkeyPending || initiate.isPending}
+                    onClick={() => void startPasskeyLogin()}
+                  >
+                    {passkeyPending ? <ArrowsClockwise className="animate-spin" /> : <Fingerprint />}
+                    {t(key("passkey.connect"))}
+                  </Button>
+                )}
+              </div>
+              {passkey && (
+                <p className="text-sm text-muted-foreground" role="status">
+                  {t(key(passkeyPending ? "passkey.waiting" : "passkey.hint"))}
+                </p>
+              )}
             </CardContent>
           </Card>
         </form>

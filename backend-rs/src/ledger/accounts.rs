@@ -294,7 +294,7 @@ pub async fn restore_soft_deleted_by_provider<'e>(
 }
 
 /// Undeletes soft-deleted accounts of the provider for the member, except those whose
-/// `external_account_id` matches `exclude`.
+/// `external_account_id` (None for a manual account) matches `exclude`.
 pub async fn restore_soft_deleted_by_provider_excluding<F>(
     conn: &mut DbHandle<'_>,
     member_id: i64,
@@ -302,7 +302,7 @@ pub async fn restore_soft_deleted_by_provider_excluding<F>(
     mut exclude: F,
 ) -> sqlx::Result<u64>
 where
-    F: FnMut(&str) -> bool,
+    F: FnMut(Option<&str>) -> bool,
 {
     let candidates: Vec<(i64, Option<String>)> = crate::db::query_as(
         "SELECT id, external_account_id FROM account \
@@ -314,7 +314,7 @@ where
     .await?;
     let ids: Vec<i64> = candidates
         .into_iter()
-        .filter(|(_, ext_id)| !ext_id.as_deref().is_some_and(&mut exclude))
+        .filter(|(_, ext_id)| !exclude(ext_id.as_deref()))
         .map(|(id, _)| id)
         .collect();
     if ids.is_empty() {

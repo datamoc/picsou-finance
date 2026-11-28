@@ -2098,7 +2098,16 @@
       "noSession": "Aucune session active",
       "sessionActive": "Session active",
       "scope": "Synchronise vos plans d'épargne salariale Natixis Interépargne (PEE, PERCO, PER…) et les fonds qu'ils contiennent : parts, valeur de la part et plus-value. Après cette première connexion, les synchronisations se font seules jusqu'à ce que Natixis mette fin à la session ; il faudra alors vous reconnecter.",
+      "passkey": {
+        "connect": "Se connecter avec une clé d'accès",
+        "hint": "Avec une clé d'accès, l'e-mail suffit : Picsou demande ensuite votre clé de sécurité, votre code PIN ou votre empreinte.",
+        "waiting": "Confirmez dans la fenêtre de la clé d'accès."
+      },
       "errors": {
+        "passkeyNotOffered": "La connexion par clé d'accès n'est pas possible ici : ce compte n'en propose pas, ou cet ordinateur ne peut pas la demander. Connectez-vous avec votre mot de passe.",
+        "passkeyFailed": "Picsou n'a pas pu mener à bien la demande de clé d'accès sur cet ordinateur. Réessayez, ou connectez-vous avec votre mot de passe.",
+        "passkeyNotConfirmed": "La demande de clé d'accès a été fermée ou a expiré. Fermez toute fenêtre de clé d'accès encore ouverte, puis réessayez.",
+        "passkeyRefused": "Natixis Interépargne a refusé l'e-mail ou la clé d'accès.",
         "tooManyAttempts": "Natixis Interépargne a bloqué les nouvelles tentatives. Réessayez plus tard.",
         "invalidCredentials": "Natixis Interépargne a refusé l'e-mail ou le mot de passe.",
         "mfaTypeUnsupported": "Ce compte ne propose que la connexion par clé d'accès ou un second facteur que Picsou ne sait pas gérer. Picsou a besoin de la connexion par mot de passe et des codes par SMS, e-mail ou appel vocal : activez ces options dans les paramètres de sécurité de Natixis Interépargne.",

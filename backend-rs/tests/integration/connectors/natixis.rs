@@ -191,6 +191,78 @@ async fn an_unreadable_history_keeps_the_stored_operations_but_imports_the_plans
     assert_eq!(count(&app, "SELECT count(*) FROM account").await, 1);
 }
 
+/// The external ids of the accounts the member sees, and their balances.
+async fn live_accounts(app: &picsou::testing::TestApp) -> Vec<(Option<String>, Decimal)> {
+    picsou::db::query_as(
+        "SELECT external_account_id, current_balance FROM account WHERE deleted_at IS NULL \
+         ORDER BY external_account_id",
+    )
+    .fetch_all(&app.state.db)
+    .await
+    .unwrap()
+}
+
+async fn delete_account(
+    app: &picsou::testing::TestApp,
+    client: &picsou::testing::Client,
+    external_id: &str,
+) {
+    let id: i64 = picsou::db::query_scalar("SELECT id FROM account WHERE external_account_id = $1")
+        .bind(external_id)
+        .fetch_one(&app.state.db)
+        .await
+        .unwrap();
+    let deleted = client.delete(&format!("/api/accounts/{id}")).send().await;
+    assert_eq!(deleted.status, 204, "{}", deleted.text());
+}
+
+#[tokio::test]
+async fn a_new_login_brings_deleted_plans_back_and_a_sync_does_not() {
+    let plan = |id: &str, balance: &str| {
+        json!({
+            "externalId": id, "name": id, "employer": "ACME", "balanceEur": n(balance), "snapshotComplete": true,
+            "positions": [{ "label": "Fonds", "quantity": n("1"), "unitValue": n(balance), "valueEur": n(balance) }]
+        })
+    };
+    let sidecar = MockServer::start().await;
+    answer(
+        &sidecar,
+        "/positions",
+        json!({ "sessionState": "renewed-state", "plans": [plan("pee", "100"), plan("percol", "50")] }),
+    )
+    .await;
+    let app = app_with_sidecar(URL, &sidecar).await;
+    let client = login(&app, &sidecar).await;
+    let both = vec![
+        (Some("natixis_pee".to_owned()), d("100")),
+        (Some("natixis_percol".to_owned()), d("50")),
+    ];
+    assert_eq!(live_accounts(&app).await, both);
+
+    delete_account(&app, &client, "natixis_pee").await;
+    assert_eq!(client.post("/api/natixis/sync").send().await.status, 202);
+    settle(&app).await;
+    assert_eq!(live_accounts(&app).await, both[1..]);
+
+    // The last plan takes the connection with it. A manual account that only names the same
+    // provider is not the login's to restore.
+    delete_account(&app, &client, "natixis_percol").await;
+    let (_, member_id) = admin(&app).await;
+    picsou::db::query(
+        "INSERT INTO account (member_id, name, type, provider, currency, current_balance, \
+         is_manual, color, created_at, updated_at, deleted_at) VALUES ($1, 'Manual', \
+         'EMPLOYEE_SAVINGS', 'Natixis Interépargne', 'EUR', 7, true, '#8b5cf6', now(), now(), now())",
+    )
+    .bind(member_id)
+    .execute(&app.state.db)
+    .await
+    .unwrap();
+
+    login(&app, &sidecar).await;
+
+    assert_eq!(live_accounts(&app).await, both);
+}
+
 #[tokio::test]
 async fn a_login_without_a_code_step_is_refused() {
     let sidecar = MockServer::start().await;

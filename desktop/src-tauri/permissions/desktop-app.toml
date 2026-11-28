@@ -22,3 +22,8 @@ commands.allow = ["install_desktop_update"]
 identifier = "allow-open-enable-banking-auth"
 description = "Allows the desktop app window to open an Enable Banking authorization window."
 commands.allow = ["open_enable_banking_auth"]
+
+[[permission]]
+identifier = "allow-passkey-prompt"
+description = "Allows the bundled passkey window to read its step and send the person's answer."
+commands.allow = ["passkey_view", "passkey_answer"]

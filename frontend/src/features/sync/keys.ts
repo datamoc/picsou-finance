@@ -18,6 +18,7 @@ export const syncKeys = {
   amundi: () => [...syncKeys.all, 'amundi'] as const,
   cmes: () => [...syncKeys.all, 'cmes'] as const,
   natixis: () => [...syncKeys.all, 'natixis'] as const,
+  natixisPasskey: () => [...syncKeys.all, 'natixis-passkey'] as const,
   cic: () => [...syncKeys.all, 'cic'] as const,
   amex: () => [...syncKeys.all, 'amex'] as const,
   fortuneo: () => [...syncKeys.all, 'fortuneo'] as const,

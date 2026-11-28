@@ -164,7 +164,7 @@ test-sidecar:
 # The desktop app for this machine (#587): the SPA, PostgreSQL and pg_dump of the Docker release's
 # major and the sidecars (desktop/scripts/fetch_runtime.py), then the Tauri bundles, whose shell
 # links backend-rs. Needs Rust, the Tauri CLI (cargo install tauri-cli --version '^2') and, on
-# Linux, the WebKitGTK 4.1 headers.
+# Linux, the WebKitGTK 4.1 and libudev headers.
 desktop:
 	cd frontend && bun install --frozen-lockfile && bun run build
 	python3 desktop/scripts/fetch_runtime.py

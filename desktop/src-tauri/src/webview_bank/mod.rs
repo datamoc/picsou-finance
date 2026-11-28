@@ -1,8 +1,9 @@
 //! Reusable native Tauri WebView bank connector bridge (`127.0.0.1` loopback HTTP).
 //!
 //! Hosts interactive WebView bank connectors inside `picsou-desktop` for BNP Paribas / Hello bank!,
-//! American Express, and Revolut. Every route except health checks requires the shared
-//! `X-Picsou-Sidecar-Key` (`APP_SIDECAR_API_KEY`) verified in constant time.
+//! American Express, and Revolut, and the passkey prompt of bank logins (`crate::passkey`). Every
+//! route except health checks requires the shared `X-Picsou-Sidecar-Key` (`APP_SIDECAR_API_KEY`)
+//! verified in constant time.
 
 pub mod amex;
 pub mod amex_parsers;
@@ -28,6 +29,7 @@ use subtle::ConstantTimeEq;
 use tauri::{AppHandle, Url, WebviewWindow};
 use tokio::sync::oneshot;
 
+use crate::passkey;
 use crate::supervisor::LOOPBACK;
 use amex::AmexWebviewManager;
 use bnp::{ApiError, BnpWebviewManager};
@@ -47,6 +49,13 @@ struct BridgeState {
     amex: Arc<AmexWebviewManager>,
     linxea: Arc<LinxeaWebviewManager>,
     revolut: Arc<RevolutWebviewManager>,
+}
+
+/// The passkey route has its own state, so that tests can serve it without a running app.
+struct PasskeyState {
+    api_key: String,
+    gate: passkey::Gate,
+    authenticator: Arc<dyn passkey::Authenticator>,
 }
 
 /// Running loopback WebView bridge; dropping or calling `stop` shuts down the HTTP server and
@@ -78,6 +87,10 @@ impl WebviewBridge {
         format!("{}/revolut", self.url)
     }
 
+    pub fn passkey_url(&self) -> String {
+        format!("{}/passkey", self.url)
+    }
+
     pub fn stop(&mut self) {
         self.bnp.close_all(&self.app);
         self.amex.close_all(&self.app);
@@ -99,6 +112,7 @@ pub fn start(app: AppHandle, api_key: String) -> io::Result<WebviewBridge> {
     let amex = Arc::new(AmexWebviewManager::new());
     let linxea = Arc::new(LinxeaWebviewManager::new());
     let revolut = Arc::new(RevolutWebviewManager::new());
+    let passkey_routes = passkey_router(api_key.clone(), passkey::system(app.clone()));
     let state = Arc::new(BridgeState {
         app: app.clone(),
         api_key,
@@ -125,7 +139,7 @@ pub fn start(app: AppHandle, api_key: String) -> io::Result<WebviewBridge> {
                     tracing::error!("webview bank bridge listener conversion failed");
                     return;
                 };
-                let router = build_router(state);
+                let router = build_router(state).merge(passkey_routes);
                 let served = axum::serve(tcp, router)
                     .with_graceful_shutdown(async move {
                         let _ = shutdown_rx.await;
@@ -508,6 +522,34 @@ async fn health() -> impl IntoResponse {
     Json(json!({ "status": "ok", "webview": true }))
 }
 
+fn passkey_router(api_key: String, authenticator: Arc<dyn passkey::Authenticator>) -> axum::Router {
+    axum::Router::new()
+        .route("/passkey/assertion", post(passkey_assertion))
+        .with_state(Arc::new(PasskeyState {
+            api_key,
+            gate: passkey::Gate::default(),
+            authenticator,
+        }))
+}
+
+async fn passkey_assertion(
+    State(state): State<Arc<PasskeyState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    if !sidecar_key_valid(&headers, &state.api_key) {
+        return unauthorized_response();
+    }
+    let Ok(request) = serde_json::from_slice(&body) else {
+        return error_response(ApiError::new(StatusCode::BAD_REQUEST, "INVALID_DATA"));
+    };
+    let authenticator = Arc::clone(&state.authenticator);
+    match state.gate.assert(authenticator, request).await {
+        Ok(reply) => (StatusCode::OK, Json(reply)).into_response(),
+        Err(refusal) => error_response(ApiError::new(refusal.status, refusal.detail)),
+    }
+}
+
 // ─── BNP routes ──────────────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
@@ -843,6 +885,49 @@ mod tests {
 
         headers.insert(API_KEY_HEADER, HeaderValue::from_static("secret-key"));
         assert!(sidecar_key_valid(&headers, "secret-key"));
+    }
+
+    /// A prompt the person closes at once.
+    struct Closed;
+
+    impl passkey::Authenticator for Closed {
+        fn assert(
+            &self,
+            _prompt: &passkey::Prompt,
+        ) -> Result<passkey::Assertion, passkey::Failure> {
+            Err(passkey::Failure::Cancelled)
+        }
+    }
+
+    #[tokio::test]
+    async fn the_passkey_route_checks_the_key_before_the_body_and_names_each_refusal() {
+        let listener = tokio::net::TcpListener::bind((LOOPBACK, 0)).await.unwrap();
+        let url = format!(
+            "http://{}/passkey/assertion",
+            listener.local_addr().unwrap()
+        );
+        let router = passkey_router("secret-key".to_owned(), Arc::new(Closed));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let valid = r#"{"rpId":"auth-nie.natixis.com","challenge":"AAAA"}"#;
+
+        for (key, body, status, detail) in [
+            ("wrong", "{}", StatusCode::UNAUTHORIZED, "UNAUTHORIZED"),
+            ("secret-key", "{}", StatusCode::BAD_REQUEST, "INVALID_DATA"),
+            ("secret-key", valid, StatusCode::GONE, "PASSKEY_CANCELLED"),
+        ] {
+            let response = client
+                .post(&url)
+                .header(API_KEY_HEADER, key)
+                .body(body)
+                .send()
+                .await
+                .unwrap();
+
+            assert_eq!(response.status(), status, "{detail}");
+            let answer: serde_json::Value = response.json().await.unwrap();
+            assert_eq!(answer["detail"], detail);
+        }
     }
 
     #[test]

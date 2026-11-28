@@ -44,6 +44,9 @@ const FRAMEWORK_ROUTES: &[(&str, &str)] = &[
     ("POST", "/api/revolut/webview/cancel/{}"),
     // Additive Rust endpoints (not in Java).
     ("POST", "/api/admin/settings/ai/models"),
+    // Natixis passkey sign-in through the desktop shell.
+    ("GET", "/api/natixis/auth/passkey"),
+    ("POST", "/api/natixis/auth/passkey"),
 ];
 
 /// Spring and axum share the {name} syntax; a regex constraint ({id:\d+}) and the variable name

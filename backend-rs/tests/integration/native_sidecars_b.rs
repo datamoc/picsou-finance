@@ -2,3 +2,4 @@
 
 mod bourso;
 mod natixis;
+mod natixis_passkey;

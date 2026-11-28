@@ -4,6 +4,7 @@
 mod enable_banking;
 mod external;
 mod i18n;
+mod passkey;
 mod sidecars;
 mod supervisor;
 mod update;
@@ -249,7 +250,11 @@ fn main() {
             enable_banking::open_enable_banking_auth,
             update::get_desktop_update_status,
             update::check_desktop_update,
-            update::install_desktop_update
+            update::install_desktop_update,
+            #[cfg(target_os = "linux")]
+            passkey::linux::passkey_view,
+            #[cfg(target_os = "linux")]
+            passkey::linux::passkey_answer
         ])
         .on_page_load(|webview, payload| {
             if webview.label() == "main" && payload.event() == PageLoadEvent::Finished {
@@ -264,6 +269,8 @@ fn main() {
             }
         })
         .setup(|app| {
+            #[cfg(target_os = "linux")]
+            app.manage(passkey::linux::Dialog::default());
             let handle = app.handle().clone();
             let layout = layout(&handle)?;
             // The shell and the linked backend log to the same rolling file.

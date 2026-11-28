@@ -321,6 +321,7 @@ pub fn start(
         let amex_url = bridge.amex_url();
         let linxea_url = bridge.linxea_url();
         let revolut_url = bridge.revolut_url();
+        let passkey_url = bridge.passkey_url();
         {
             let mut s = stack.lock().unwrap_or_else(|e| e.into_inner());
             if s.stopping {
@@ -334,6 +335,9 @@ pub fn start(
         env.push(("AMEX_AUTH_URL".to_owned(), amex_url));
         env.push(("LINXEA_AUTH_URL".to_owned(), linxea_url));
         env.push(("REVOLUT_AUTH_URL".to_owned(), revolut_url));
+        if cfg!(any(windows, target_os = "linux")) {
+            env.push((PASSKEY_URL_VARIABLE.to_owned(), passkey_url));
+        }
         env.push(("APP_SIDECAR_API_KEY".to_owned(), sidecar_key.clone()));
     }
     let config = Config::load(&Env::from_map(env))
@@ -453,6 +457,9 @@ pub const NATIVE_SIDECARS: &[(&str, &str)] = &[
     ("BOURSO_AUTH_URL", "native://bourso-auth"),
 ];
 
+/// Where the backend asks for a passkey assertion: only the shell that serves it may set it.
+const PASSKEY_URL_VARIABLE: &str = "NATIXIS_PASSKEY_URL";
+
 /// The backend's environment: loopback only, embedded SQLite under the app-data folder, plain
 /// HTTP cookies, per-launch desktop session token, and the 6 pure-HTTP bank connectors routed to
 /// their native Rust implementations.
@@ -508,7 +515,14 @@ pub fn merge_backend_env(
         .collect();
     let mut env: Vec<(String, String)> = user_env
         .into_iter()
-        .filter(|(k, _)| k != "APP_DESKTOP_TOKEN" && k != "APP_DESKTOP_LEGACY_POSTGRES")
+        .filter(|(k, _)| {
+            ![
+                "APP_DESKTOP_TOKEN",
+                "APP_DESKTOP_LEGACY_POSTGRES",
+                PASSKEY_URL_VARIABLE,
+            ]
+            .contains(&k.as_str())
+        })
         .collect();
     for (k, v) in backend_env(layout, port, desktop_token) {
         if !overrides.contains(&k) {
@@ -812,6 +826,10 @@ mod tests {
                 "attacker-chosen-token".to_owned(),
             ),
             ("APP_DESKTOP_LEGACY_POSTGRES".to_owned(), "true".to_owned()),
+            (
+                "NATIXIS_PASSKEY_URL".to_owned(),
+                "http://127.0.0.1:1/passkey".to_owned(),
+            ),
         ];
         let env: std::collections::HashMap<_, _> =
             merge_backend_env(user_env, &layout(&root), 8123, "real-ephemeral-token")
@@ -827,6 +845,7 @@ mod tests {
         assert_eq!(env["DATABASE_URL"], "sqlite:///picsou/data/picsou.db");
         assert_eq!(env["APP_DESKTOP_TOKEN"], "real-ephemeral-token");
         assert!(!env.contains_key("APP_DESKTOP_LEGACY_POSTGRES"));
+        assert!(!env.contains_key("NATIXIS_PASSKEY_URL"));
     }
 
     #[test]

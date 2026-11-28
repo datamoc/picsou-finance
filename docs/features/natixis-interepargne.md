@@ -55,6 +55,43 @@ backend stores the returned sessionState, re-checks plan totals and writes one
 EMPLOYEE_SAVINGS account per plan with its fund holdings
 ```
 
+### Passkey sign-in (Picsou Desktop on Windows and Linux)
+
+An account can sign in with a passkey it already has, from the e-mail alone. It needs
+the in-process connector and the desktop shell's prompt, so the button only appears
+when `GET /api/natixis/auth/passkey` answers `{"available": true}`
+([ADR](../decisions/2026-11-25-natixis-passkey-on-desktop.md),
+[Linux](../decisions/2026-11-26-passkey-security-keys-on-linux.md)).
+
+```
+UI ── email ──▶ POST /api/natixis/auth/passkey ──▶ connector /passkey
+        authorize (PKCE) → SAML SSO page → login modes (WEBAUTHN)
+        → webauthn/authentication/options
+        ──▶ shell POST /passkey/assertion ──▶ passkey prompt, confirmed by the saver
+        → webauthn/authentication/verifications
+        → profile check → SAML response → tokens → users/me   (as after a code)
+UI ◀── session status; the first sync is queued
+```
+
+- `backend-rs/src/native_sidecars/natixis/passkey.rs` runs the steps;
+  `desktop/src-tauri/src/passkey/` calls Windows, or a USB security key on Linux.
+- **Browser identity.** Natixis answers the passkey check with a 500 when the request
+  carries no browser `User-Agent` and `Accept-Language`. The passkey login names Chrome
+  on Windows, in every request, on Linux too: it is the identity the flow was verified with.
+- **Encoding.** Natixis reads the assertion in standard base64 with padding. The
+  verification body is `rawId` and `response`, with no `id` or `type`.
+- The relying party in the options must be the identity provider's host; the shell
+  signs for `auth-nie.natixis.com` only.
+- Errors: no `WEBAUTHN` mode, or a computer that cannot show the prompt (`501`), is
+  `MFA_TYPE_UNSUPPORTED`; a prompt closed, timed out or already open is
+  `AUTH_ATTEMPT_EXPIRED`; a refused assertion is `INVALID_CREDENTIALS`; options the shell
+  refuses to sign are `UPSTREAM_FORMAT_CHANGED`; any other failure of the shell or of its
+  answer is `INTERNAL_ERROR`. The panel words all but `UPSTREAM_FORMAT_CHANGED` for a
+  passkey, so a shell failure does not read as a Natixis outage there (the API's own
+  `detail` and the sync log still use the bank's generic wording).
+- The shell is only reached at a loopback address (`localhost` is refused: a name lets the
+  resolver choose where the key goes), with no proxy and no redirect.
+
 ### Operations history
 
 `/positions` also returns the saver's finished operations from the last five years,
@@ -180,7 +217,8 @@ spending. The rows stay visible on the account page and in exports.
 - **At most 5 wrong codes per login attempt**: the fifth drops the attempt
   (`AUTH_ATTEMPT_EXPIRED`), well before Natixis would lock the account.
 - **Accounts without a password login** (passkey only), or without an SMS, e-mail or
-  voice channel, get `MFA_TYPE_UNSUPPORTED`.
+  voice channel, get `MFA_TYPE_UNSUPPORTED` from the password login. A passkey-only
+  account signs in with its passkey on Picsou Desktop for Windows or Linux.
 - **Natixis can ask a new device to register a passkey** after the password and the code:
   the profile check answers `403` `WEBAUTHN_REGISTRATION_REQUIRED`. It was seen on accounts
   that already have a passkey; every Picsou login is a new device (a new `x-device-id`). The
@@ -203,9 +241,14 @@ spending. The rows stay visible on the account page and in exports.
 - **Ticker scheme:** `NATIXIS-<fundCode>`. Without a code, the ticker is the label slug cut
   to 21 characters, a hyphen, then the first 8 hex characters of the label's SHA-256. Two
   funds whose names start alike therefore never collide.
+- **A new login brings deleted plans back; a sync does not.** A sync skips a plan whose
+  account was deleted. A login is the saver asking for their plans again, so it undeletes
+  their synced Natixis accounts (`natixis_` ids; a manual account naming the same provider
+  stays deleted) in the transaction that stores the session, as Trade Republic does. A plan
+  Natixis no longer lists comes back too, and the import closes it at zero.
 - **Lock order:** the sync commit locks the member's Natixis accounts (by id), then the
   session row. That is the order an account deletion already takes, so the two cannot
-  deadlock.
+  deadlock. A login restores the deleted accounts before it writes the session row.
 - **Interrupted jobs:** at boot, every QUEUED or RUNNING job last updated before this
   backend started is failed as retryable at once. The jobs live in a process-local
   executor, and Helm and Compose run a single backend, so such a job has no worker
@@ -240,6 +283,11 @@ spending. The rows stay visible on the account page and in exports.
 - `NatixisSyncServiceTest`, `NatixisSyncRecoveryTest` and `NatixisControllerTest`; the NATIXIS rows of
   `SidecarContractTest` and `SidecarBankCodesTest`.
 - `frontend/src/demo/natixis.test.ts` and `NatixisPanel.test.tsx`.
+- Passkey: the flow against a fake Natixis and a fake shell
+  (`tests/integration/native_sidecars_b/natixis_passkey.rs`), and the shell's request
+  checks and, on Linux, the steps of the passkey window (`cargo test` in
+  `desktop/src-tauri`). The Windows prompt and the USB exchange with a key are only
+  exercised by a real sign-in.
 
 ## Links
 

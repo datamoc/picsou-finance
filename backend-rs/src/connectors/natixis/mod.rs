@@ -17,7 +17,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use http::Method;
 use regex::Regex;
 use rust_decimal::Decimal;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use super::sidecar::flow::non_blank;
@@ -45,6 +45,8 @@ use crate::ledger::providers::NATIXIS as PROVIDER;
 use crate::ledger::sidecar::{SidecarBank, SidecarErrorCode, SourceSyncResult};
 use crate::ledger::sync_values::{clean, limit};
 use crate::ledger::transactions;
+use crate::native_sidecars::is_native_url;
+use crate::native_sidecars::natixis::PasskeyBridge;
 use crate::routes::Routes;
 
 const BANK: SidecarBank = SidecarBank::Natixis;
@@ -56,6 +58,8 @@ const STALE_SYNC_AFTER_MINUTES: i64 = 10;
 const SETTLEMENT_MARGIN_DAYS: u64 = 90;
 const AUTH_TIMEOUT: Duration = Duration::from_secs(45);
 const POSITIONS_TIMEOUT: Duration = Duration::from_secs(120);
+/// Above the connector's own budgets: two Natixis deadlines around the passkey prompt's.
+const PASSKEY_TIMEOUT: Duration = Duration::from_secs(230);
 const CANCEL_TIMEOUT: Duration = Duration::from_secs(10);
 const AUTH_RATE_LIMITED: &str =
     "Too many Natixis Interépargne authentication attempts. Please wait before retrying.";
@@ -78,6 +82,8 @@ pub fn register(routes: &mut Routes) {
     routes
         .post("/api/natixis/auth/initiate", initiate)
         .post("/api/natixis/auth/complete", complete)
+        .get("/api/natixis/auth/passkey", passkey_availability)
+        .post("/api/natixis/auth/passkey", passkey_login)
         .post("/api/natixis/sync", sync_now)
         .get("/api/natixis/status", status)
         .delete("/api/natixis/session", clear);
@@ -96,6 +102,23 @@ impl Validate for InitiateRequest {
         e.not_blank("password", password)
             .size("password", password, 0, 100);
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct PasskeyRequest {
+    email: Option<String>,
+}
+
+impl Validate for PasskeyRequest {
+    fn validate(&self, e: &mut Errors) {
+        let email = self.email.as_deref();
+        e.not_blank("email", email).size("email", email, 0, 254);
+    }
+}
+
+#[derive(Serialize)]
+struct PasskeyAvailability {
+    available: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -220,10 +243,69 @@ async fn complete(
         )
         .await?;
     logins(&state).remove(&process_id);
+    let status = adopt_session(&state, member_id, attempt.generation, response).await?;
+    Ok(AxumJson(status))
+}
+
+/// Whether a passkey prompt can be shown: the in-process connector, next to a desktop shell.
+fn offers_passkey(state: &AppState) -> bool {
+    is_native_url(state.connectors.base_url(BANK.service_name()))
+        && PasskeyBridge::from_config(&state.config).is_some()
+}
+
+async fn passkey_availability(
+    State(state): State<AppState>,
+    _auth: Auth,
+) -> AxumJson<PasskeyAvailability> {
+    AxumJson(PasskeyAvailability {
+        available: offers_passkey(&state),
+    })
+}
+
+/// Signs in with a passkey in one call: the connector answers once the person has confirmed the
+/// system prompt.
+async fn passkey_login(
+    State(state): State<AppState>,
+    auth: Auth,
+    ip: ClientIp,
+    Json(req): Json<PasskeyRequest>,
+) -> AppResult<AxumJson<SessionStatusResponse>> {
+    consume(&state, &policies::NATIXIS_AUTH, &ip, AUTH_RATE_LIMITED)?;
+    if !offers_passkey(&state) {
+        return Err(error(
+            SidecarErrorCode::UpstreamUnavailable,
+            "Passkey sign-in needs Picsou Desktop on Windows or Linux",
+        )
+        .into());
+    }
+    let member_id = auth.member_id;
+    let generation = logins(&state).generation(member_id);
+    let response: SidecarSessionState = client(&state)
+        .post(
+            "/passkey",
+            &json!({ "email": req.email }),
+            PASSKEY_TIMEOUT,
+            "Could not sign in to Natixis Interépargne with a passkey",
+            Some(SidecarErrorCode::InvalidCredentials),
+        )
+        .await?;
+    let status = adopt_session(&state, member_id, generation, response).await?;
+    Ok(AxumJson(status))
+}
+
+/// Stores a fresh session and queues its first sync, unless the member disconnected since the
+/// login began (`generation` is what it was then). Answers the status as it stood before the job
+/// started.
+async fn adopt_session(
+    state: &AppState,
+    member_id: i64,
+    generation: u64,
+    response: SidecarSessionState,
+) -> AppResult<SessionStatusResponse> {
     let plain_state = non_blank(response.session_state, "Natixis did not return a session")?;
     let job = {
-        let _write = logins(&state).write_lock().await;
-        if logins(&state).generation(member_id) != attempt.generation {
+        let _write = logins(state).write_lock().await;
+        if logins(state).generation(member_id) != generation {
             return Err(error(
                 SidecarErrorCode::AuthAttemptExpired,
                 "The Natixis connection was removed during the login",
@@ -231,9 +313,19 @@ async fn complete(
             .into());
         }
         let mut tx = state.db.begin().await?;
+        // The saver signed in again on purpose: the plans they had deleted come back with this
+        // login's import; a routine sync still skips them. Before the session row is written:
+        // accounts are locked first, as an account deletion does.
+        accounts::restore_soft_deleted_by_provider_excluding(
+            &mut tx.as_handle(),
+            member_id,
+            PROVIDER,
+            |id| !id.is_some_and(|id| id.starts_with(EXTERNAL_ID_PREFIX)),
+        )
+        .await?;
         let job = template()
             .insert_queued(
-                &state,
+                state,
                 &mut tx.as_handle(),
                 member_id,
                 plain_state,
@@ -244,9 +336,9 @@ async fn complete(
         tx.commit().await?;
         job
     };
-    let status = get_status(&state, member_id).await?;
-    template().submit(&state, job)?;
-    Ok(AxumJson(status))
+    let status = get_status(state, member_id).await?;
+    template().submit(state, job)?;
+    Ok(status)
 }
 
 async fn sync_now(State(state): State<AppState>, auth: Auth, ip: ClientIp) -> AppResult<Response> {
