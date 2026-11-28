@@ -24,11 +24,16 @@ function errorSuffix(error: unknown): string {
   return ERROR_MESSAGE_SUFFIXES[getErrorCode(error) ?? ''] ?? 'serverError'
 }
 
+interface LucyaPanelProps {
+  /** Called once the contracts are written, so a host dialog can close. */
+  onConnected?: () => void
+}
+
 /**
  * Lucya keeps nothing between two visits: signing in is how its contracts are refreshed, so there
  * is no session status, sync button or disconnection.
  */
-export function LucyaPanel() {
+export function LucyaPanel({ onConnected }: LucyaPanelProps = {}) {
   const { t } = useTranslation()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -63,7 +68,7 @@ export function LucyaPanel() {
           event.preventDefault()
           refresh.mutate(
             { identifier: identifier.trim(), password },
-            { onSettled: () => setPassword('') },
+            { onSuccess: () => onConnected?.(), onSettled: () => setPassword('') },
           )
         }}
       >

@@ -1309,6 +1309,7 @@
       "corum": "CORUM SCPI and CORUM Life insurance: units, valuation and operations",
       "sofidy": "Sofidy SCPI units, at the withdrawal price",
       "louve": "SCPI units bought through Louve Invest, read-only, at the withdrawal price",
+      "lucya": "Add your Lucya life insurance and PER contracts; sign in again to update their value.",
       "property": "House, apartment, land…",
       "fortuneo": "Sync your Fortuneo accounts",
       "caisseEpargne": "Current account, Livret A, LDDS, PEL, LEP, PER, life insurance, loans and cards at Caisse d'Epargne",
