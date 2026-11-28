@@ -19,14 +19,14 @@ vi.mock('react-i18next', () => ({
 
 const { LucyaTab } = await import('./LucyaTab')
 
-function renderTab() {
+function renderTab(onConnected?: () => void) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={client}>{children}</QueryClientProvider>
   }
-  render(<LucyaTab />, { wrapper: Wrapper })
+  render(<LucyaTab onConnected={onConnected} />, { wrapper: Wrapper })
 }
 
 function signIn() {
@@ -58,6 +58,20 @@ describe('LucyaTab', () => {
       expect.anything(),
     )
     await waitFor(() => expect(screen.getByLabelText('sync.lucya.password')).toHaveValue(''))
+  })
+
+  it('tells its host once the contracts are written, never after a refusal', async () => {
+    const onConnected = vi.fn()
+    apiPost.mockRejectedValueOnce({ response: { status: 422, data: {} } })
+    apiPost.mockResolvedValueOnce({ data: { contractCount: 1 } })
+    renderTab(onConnected)
+
+    signIn()
+    await screen.findByRole('alert')
+    expect(onConnected).not.toHaveBeenCalled()
+
+    signIn()
+    await waitFor(() => expect(onConnected).toHaveBeenCalledOnce())
   })
 
   it.each([

@@ -6,7 +6,7 @@
 
 [Lucya](https://app.lucya.com) distributes life insurance and retirement (PER) contracts and has
 no API that Picsou can use. The member refreshes the value of their contracts by signing in from
-the Sync page.
+the Sync page or from Add account.
 
 ## How it works
 
@@ -19,7 +19,8 @@ the sign-in is stored, neither a session nor the password, so there is no schedu
 
 - `backend-rs/src/native_sidecars/lucya.rs`: sign-in and home-page parser, no database access
 - `backend-rs/src/connectors/lucya/mod.rs`: the route and the account import
-- `frontend/src/components/sync/LucyaPanel.tsx`: the form on the Sync page
+- `frontend/src/components/sync/LucyaPanel.tsx`: the form, on the Sync page and in Add account
+  (which closes once the contracts are written)
 
 ### Flow
 

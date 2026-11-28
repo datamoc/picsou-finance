@@ -137,6 +137,12 @@ vi.mock('@/components/sync/SofidyPanel', () => ({
   ),
 }))
 
+vi.mock('@/components/sync/LucyaPanel', () => ({
+  LucyaPanel: ({ onConnected }: { onConnected?: () => void }) => (
+    <button onClick={onConnected}>lucya-wizard</button>
+  ),
+}))
+
 vi.stubGlobal('ResizeObserver', class {
   observe() {}
   unobserve() {}
@@ -493,6 +499,18 @@ describe('AddAccountModal Banque Populaire wizard', () => {
 
     fireEvent.click(screen.getByText('sync.banquePopulaire.title'))
     fireEvent.click(screen.getByRole('button', { name: 'banque-populaire-wizard' }))
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+})
+
+describe('AddAccountModal Lucya wizard', () => {
+  it('opens the connector and closes after a refresh', () => {
+    const onOpenChange = vi.fn()
+    render(<AddAccountModal open onOpenChange={onOpenChange} />)
+
+    fireEvent.click(screen.getByText('sync.lucya.title'))
+    fireEvent.click(screen.getByRole('button', { name: 'lucya-wizard' }))
 
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
